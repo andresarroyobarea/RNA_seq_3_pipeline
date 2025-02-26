@@ -1,14 +1,11 @@
 configfile: "config/config.yaml"
 
-# ---- FastQC and MultiQC results ------
-#bam_sorted = expand("results/alignment/{sample}_{condition}/{sample}_{condition}Aligned.sortedByCoord.out.bam", sample = config["sample"], condition = config["condition"]),
-feature_table = "results/feature_counts/counts_raw.tsv" 
-multiqc_report = "results/MultiQC/multiqc_report.html"
+import os
 
 rule all:
     input:
-        multiqc_report,
-        feature_table
+        "results/feature_counts/counts_raw.tsv",
+        "results/MultiQC/multiqc_report.html"
 
 rule fastqc_raw_trim:
     input:
@@ -19,7 +16,8 @@ rule fastqc_raw_trim:
     log:
         log = "log/QC/qc_per_lane/{seqs_state}/{sample}_{condition}_{seq_lane}_R1_001_fastqc_{seqs_state}.log",
     params: 
-        outdir = "results/QC/qc_per_lane/{seqs_state}",
+        #outdir = "results/QC/qc_per_lane/{seqs_state}"
+        outdir = lambda wildcards, output: os.path.dirname(output.html)
     conda:
         config["conda_envs"]["qc"]
     threads: 2
@@ -63,6 +61,8 @@ rule merged_fastq:
         )
     output: 
         fastq_merged = "data/merged/{sample}_{condition}_merged.fastq.gz"
+    conda: 
+        config["conda_envs"]["rna_seq_3"]
     log:
         "log/merged/{sample}_{condition}_merged.log"
     shell:
@@ -98,7 +98,8 @@ rule alignment:
         bam_sorted = "results/alignment/{sample}_{condition}/{sample}_{condition}Aligned.sortedByCoord.out.bam"
     params:
         genome_index = config["genome_index"],
-        out_name = "results/alignment/{sample}_{condition}/{sample}_{condition}"
+        outdir = lambda wildcards, output: os.path.dirname(output.bam_sorted)
+        #out_name = "results/alignment/{sample}_{condition}/{sample}_{condition}"
     conda:
         config["conda_envs"]["rna_seq_3"]
     threads: 5
@@ -112,7 +113,7 @@ rule alignment:
             --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverLmax 0.3 \
             --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --limitBAMsortRAM 12000000000 \
             --outSAMattributes NH HI AS NM MD --outSAMtype BAM SortedByCoordinate \
-            --outFileNamePrefix {params.out_name} 2> {log}
+            --outFileNamePrefix {params.outdir} 2> {log}
     """
 
 rule fastqc_alignment:
@@ -124,7 +125,8 @@ rule fastqc_alignment:
     log:
         log = "log/QC/alignment/FastQC/{sample}_{condition}_bam_fastqc.log"
     params: 
-        outdir = "results/QC/alignment/FastQC"
+        #outdir = "results/QC/alignment/FastQC"
+        outdir = lambda wildcards, output : os.path.dirname(output.html)
     conda:
         config["conda_envs"]["qc"]
     threads: 5
@@ -237,9 +239,10 @@ rule multiqc:
         samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}_{condition}Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"], condition = config["condition"]),
         rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_{condition}_strandiness.txt", sample = config["sample"], condition = config["condition"])
     output:
-        output = "results/MultiQC/multiqc_report.html"
+        multiqc = "results/MultiQC/multiqc_report.html"
     params: 
-        outdir = "results/MultiQC",
+        #outdir = "results/MultiQC"
+        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     conda: 
         config["conda_envs"]["qc"]
     log:
