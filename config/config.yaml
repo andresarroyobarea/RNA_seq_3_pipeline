@@ -1,0 +1,37 @@
+conda_envs: 
+  qc: "envs/qc.yml"
+  rna_seq_3: "envs/rna_seq_3.yml"
+  rna_seq_3_v2 : "envs/rna_seq_3_v2.yml"
+
+seqs_state:
+  - raw
+  - trimmed
+
+condition:
+  - butyrate
+  - control
+
+sample:
+  - DS21
+  - DS22
+  - DS24
+  - DS25
+
+seq_lane:
+  - L001
+  - L002
+  - L003
+  - L004
+
+fastq_screen:
+  - aligner: bowtie2
+
+genome_index: resources/genome/hg38_genome_index
+annotation: resources/annotations/hg38/Homo_sapiens.GRCh38.111.gtf
+reference_bed: resources/annotations/hg38/Homo_sapiens.GRCh38.111.bed
+fastq_screen_conf: resources/fastq_screen_files/FastQ_Screen_Genomes/fastq_screen.conf
+fastq_screen_aling: bowtie2
+
+qualimap:
+  genome: HUMAN
+  mem: 18G
