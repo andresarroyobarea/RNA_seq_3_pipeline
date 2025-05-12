@@ -24,6 +24,8 @@ rule fastqc:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
 
+# AÑADIR REGLA CONDICIONAL DE UMI-TOOLS
+
 rule bbduk_se:
     input:
         sample = "data/{seqs_state}/{sample}_{seq_lane}_{seqs_state}.fastq.gz",
@@ -53,17 +55,16 @@ rule bbduk_se:
 rule merged_fastq:
     input: 
         lambda wildcards: expand(
-            "data/trimmed/{sample}_{condition}_{seq_lane}_R1_001_trimmed.fastq.gz",
+            fastq_trim = "data/trimmed/{sample}_{seq_lane}_trimmed.fastq.gz",
             sample = wildcards.sample,
-            condition = wildcards.condition,
             seq_lane = config["seq_lane"]
         )
     output: 
-        fastq_merged = "data/merged/{sample}_{condition}_merged.fastq.gz"
+        fastq_merged = "data/merged/{sample}.fastq.gz"
     conda: 
         config["conda_envs"]["rna_seq_3"]
     log:
-        "log/merged/{sample}_{condition}_merged.log"
+        "log/merged/{sample}_merging.log"
     shell:
         "cat {input} > {output.fastq_merged} 2> {log}"
 
@@ -92,22 +93,21 @@ rule merged_fastq:
 
 rule alignment:
     input: 
-        "data/merged/{sample}_{condition}_merged.fastq.gz"
+        fastq_merged = "data/merged/{sample}.fastq.gz"
     output: 
-        bam_sorted = "results/alignment/{sample}_{condition}/{sample}_{condition}Aligned.sortedByCoord.out.bam"
+        bam_sorted = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     params:
         genome_index = config["genome_index"],
         outdir = lambda wildcards, output: os.path.dirname(output.bam_sorted)
-        #out_name = "results/alignment/{sample}_{condition}/{sample}_{condition}"
     conda:
         config["conda_envs"]["rna_seq_3"]
     threads: 5
     resources:
         mem_mb=18432
     log:
-        "log/alignment/{sample}_{condition}_STAR.log" 
+        "log/alignment/{sample}_alignment.log" 
     shell: """
-        STAR --runThreadN {threads} --genomeDir {params.genome_index} --genomeLoad LoadAndKeep --readFilesIn {input} \
+        STAR --runThreadN {threads} --genomeDir {params.genome_index} --genomeLoad LoadAndKeep --readFilesIn {input.fastq_merged} \
             --readFilesCommand gunzip -c --outFilterType BySJout --outFilterMultimapNmax 25 --alignSJoverhangMin 8 \
             --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverLmax 0.3 \
             --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --limitBAMsortRAM 12000000000 \
@@ -117,21 +117,20 @@ rule alignment:
 
 rule fastqc_alignment:
     input:
-        "results/alignment/{sample}_{condition}/{sample}_{condition}Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     output:
-        html = "results/QC/alignment/FastQC/{sample}_{condition}Aligned.sortedByCoord.out_fastqc.html",
-        zip = "results/QC/alignment/FastQC/{sample}_{condition}Aligned.sortedByCoord.out_fastqc.zip",
+        html = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html",
+        zip = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.zip",
     log:
-        log = "log/QC/alignment/FastQC/{sample}_{condition}_bam_fastqc.log"
+        "log/QC/alignment/FastQC/{sample}_alignment_fastqc.log"
     params: 
-        #outdir = "results/QC/alignment/FastQC"
         outdir = lambda wildcards, output : os.path.dirname(output.html)
     conda:
         config["conda_envs"]["qc"]
     threads: 5
     shell:
         "mkdir -p {params.outdir} &&"
-        "fastqc --outdir {params.outdir} --threads {threads} {input} 2> {log.log} "
+        "fastqc --outdir {params.outdir} --threads {threads} {input.bam} 2> {log} "
 
 # rule qualimap_bamqc:
 #    input:
@@ -179,37 +178,37 @@ rule fastqc_alignment:
 
 rule rseqc_strand:
     input: 
-        bam_sorted = "results/alignment/{sample}_{condition}/{sample}_{condition}Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     output: 
-        "results/QC/alignment/rseqc/{sample}_{condition}_strandiness.txt"
+        rseqc_out = "results/QC/alignment/rseqc/{sample}_strandiness.txt"
     params:
         bed_file = config["reference_bed"]
     conda: 
         config["conda_envs"]["rna_seq_3_v2"]
     log:
-        "log/QC/alignment/rseqc/{sample}_{condition}_strandiness.log"
+        "log/QC/alignment/rseqc/{sample}_rseqc.log"
     shell:
-        "infer_experiment.py -i {input.bam_sorted} -r {params.bed_file} > {output} 2> {log} "
+        "infer_experiment.py -i {input.bam} -r {params.bed_file} > {output.rseqc_out} 2> {log} "
 
 rule samtools_stats_flagstat:
     input:
-        bam_sorted = "results/alignment/{sample}_{condition}/{sample}_{condition}Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     output:
-        samtools_stats = "results/QC/alignment/samtools_stats/{sample}_{condition}Aligned.sortedByCoord.out.bam.stats",
-        samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}_{condition}Aligned.sortedByCoord.out.bam.flagstat"
+        samtools_stats = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats",
+        samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat"
     conda:
         config["conda_envs"]["rna_seq_3"]
     log:
-        log_stats = "log/QC/alignment/samtools/{sample}_{condition}_samtools_stats.log",
-        log_flagstat = "log/QC/alignment/samtools/{sample}_{condition}_samtools_flagstat.log"
+        log_stats = "log/QC/alignment/samtools/{sample}_samtools_stats.log",
+        log_flagstat = "log/QC/alignment/samtools/{sample}_samtools_flagstat.log"
     shell:"""
-        samtools stats {input.bam_sorted} > {output.samtools_stats} 2> {log.log_stats} &&
-        samtools flagstat {input.bam_sorted} > {output.samtools_flagstat} 2> {log.log_flagstat}
+        samtools stats {input.bam} > {output.samtools_stats} 2> {log.log_stats} &&
+        samtools flagstat {input.bam} > {output.samtools_flagstat} 2> {log.log_flagstat}
     """
 
 rule feature_counts:
     input:
-        bam_sorted = expand("results/alignment/{sample}_{condition}/{sample}_{condition}Aligned.sortedByCoord.out.bam", sample = config["sample"], condition = config["condition"])
+        bam = expand("results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam", sample = config["sample"])
     output: 
         feature_table = "results/feature_counts/counts_raw.tsv" 
     params:
@@ -217,30 +216,29 @@ rule feature_counts:
     conda: 
         config["conda_envs"]["rna_seq_3"]
     log:
-        "log/featureCounts/counts_raw.log"
+        "log/featureCounts/featureCounts.log"
     shell:"""
         featureCounts -a {params.annotations} -O -F GTF -t gene -g gene_id \
             --extraAttributes gene_name,transcript_name -s 1 -T 15 \
-            -o {output.feature_table} {input.bam_sorted} 2> {log}
+            -o {output.feature_table} {input.bam} 2> {log}
     """
 
 rule multiqc:
     input: 
-        seqs_QC = expand("results/QC/qc_per_lane/{seqs_state}/{sample}_{condition}_{seq_lane}_R1_001_{seqs_state}_fastqc.html", sample = config["sample"], condition = config["condition"], seq_lane = config["seq_lane"], seqs_state = config["seqs_state"]),
+        seqs_QC = expand("results/QC/qc_per_lane/{seqs_state}/{sample}_{seq_lane}_{seqs_state}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"], seqs_state = config["seqs_state"]),
         #fastq_screen_txt = expand("results/QC/fastq_screen/{sample}_{condition}/{sample}_{condition}_merged_screen.txt", sample = config["sample"], condition = config["condition"]),
         #fastq_screen_png = expand("results/QC/fastq_screen/{sample}_{condition}/{sample}_{condition}_merged_screen.png", sample = config["sample"], condition = config["condition"]),
-        bam_QC = expand("results/QC/alignment/FastQC/{sample}_{condition}Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"], condition = config["condition"]),
+        bam_QC = expand("results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
         #qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}_{condition}/qualimapReport.html", sample = config["sample"], condition = config["condition"]),
         #qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}_{condition}/genome_results.txt", sample = config["sample"], condition = config["condition"]),
         #qmap_rnaseq_html = expand("results/QC/alignment/qualimap/rnaseq/{sample}_{condition}/qualimapReport.html", sample = config["sample"], condition = config["condition"]),
         #qmap_rnaseq_txt = expand("results/QC/alignment/qualimap/rnaseq/{sample}_{condition}/rnaseq_qc_results.txt", sample = config["sample"], condition = config["condition"]),
-        samtools_stats = expand("results/QC/alignment/samtools_stats/{sample}_{condition}Aligned.sortedByCoord.out.bam.stats", sample = config["sample"], condition = config["condition"]),
-        samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}_{condition}Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"], condition = config["condition"]),
-        rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_{condition}_strandiness.txt", sample = config["sample"], condition = config["condition"])
+        samtools_stats = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats", sample = config["sample"]),
+        samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"]),
+        rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_strandiness.txt", sample = config["sample"])
     output:
         multiqc = "results/MultiQC/multiqc_report.html"
     params: 
-        #outdir = "results/MultiQC"
         outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     conda: 
         config["conda_envs"]["qc"]
