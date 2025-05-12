@@ -7,36 +7,35 @@ rule all:
         "results/feature_counts/counts_raw.tsv",
         "results/MultiQC/multiqc_report.html"
 
-rule fastqc_raw_trim:
-    input:
-        "data/{seqs_state}/{sample}_{condition}_{seq_lane}_R1_001_{seqs_state}.fastq.gz",
+rule fastqc:
+    input: 
+        fastq = "data/{seqs_state}/{sample}_{seq_lane}_{seqs_state}.fastq.gz"
     output:
-        html = "results/QC/qc_per_lane/{seqs_state}/{sample}_{condition}_{seq_lane}_R1_001_{seqs_state}_fastqc.html",
-        zip = "results/QC/qc_per_lane/{seqs_state}/{sample}_{condition}_{seq_lane}_R1_001_{seqs_state}_fastqc.zip",
+        html = "results/QC/qc_per_lane/{seqs_state}/{sample}_{seq_lane}_{seqs_state}_fastqc.html",
+        zip = "results/QC/qc_per_lane/{seqs_state}/{sample}_{seq_lane}_{seqs_state}_fastqc.zip",
     log:
-        log = "log/QC/qc_per_lane/{seqs_state}/{sample}_{condition}_{seq_lane}_R1_001_fastqc_{seqs_state}.log",
+        fastqc = "log/QC/qc_per_lane/{seqs_state}/{sample}_{seq_lane}_{seqs_state}_fastqc.log",
     params: 
-        #outdir = "results/QC/qc_per_lane/{seqs_state}"
         outdir = lambda wildcards, output: os.path.dirname(output.html)
     conda:
         config["conda_envs"]["qc"]
     threads: 2
     shell:
         "mkdir -p {params.outdir} &&"
-        "fastqc --outdir {params.outdir} --threads {threads} {input} 2> {log.log} "
+        "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
 
 rule bbduk_se:
     input:
-        sample = "data/raw/{sample}_{condition}_{seq_lane}_R1_001_raw.fastq.gz",
+        sample = "data/{seqs_state}/{sample}_{seq_lane}_{seqs_state}.fastq.gz",
         adapters = "resources/trim_files/adapters.fa.gz",
         polyA = "resources/trim_files/polyA.fa.gz"
     output:
-        trimmed = "data/trimmed/{sample}_{condition}_{seq_lane}_R1_001_trimmed.fastq.gz",
-        singleton = "data/trimmed/{sample}_{condition}_{seq_lane}_R1_001_single.fastq.gz",
-        discarded = "data/trimmed/{sample}_{condition}_{seq_lane}_R1_001_discarded.fastq.gz",
-        stats = "data/trimmed/{sample}_{condition}_{seq_lane}_R1_001_stats.txt",
+        trimmed = "data/trimmed/{sample}_{seq_lane}_trimmed.fastq.gz",
+        singleton = "data/trimmed/{sample}_{seq_lane}_single.fastq.gz",
+        discarded = "data/trimmed/{sample}_{seq_lane}_discarded.fastq.gz",
+        stats = "data/trimmed/{sample}_{seq_lane}_stats.txt",
     log:
-        "log/bbduk/{sample}_{condition}_{seq_lane}_R1_001.log"
+        "log/bbduk/{sample}_{seq_lane}_bbduk.log"
     conda: 
         config["conda_envs"]["rna_seq_3"]
     threads: 2
