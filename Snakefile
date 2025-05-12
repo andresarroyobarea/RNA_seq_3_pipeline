@@ -68,28 +68,28 @@ rule merged_fastq:
     shell:
         "cat {input} > {output.fastq_merged} 2> {log}"
 
-# rule fastq_screen:
-#    input: 
-#        fastq_merged = "data/merged/{sample}.fastq.gz"
-#    output: 
-#        fastq_screen_txt = "results/QC/fastq_screen/{sample}_fastq_screen.txt",
-#        fastq_screen_png = "results/QC/fastq_screen/{sample}_fastq_screen.png"
-#    params:
-#        fastq_screen_config = config["fastq_screen_conf"],
-#        aligner = config["fastq_screen_aling"],
-#        outdir = "results/QC/fastq_screen/"
-#    conda:
-#        config["conda_envs"]["rna_seq_3_v2"]
-#    threads: 1
-#    resources:
-#        mem_mb=28728
-#    log:
-#        log = "log/QC/fastq_screen/{sample}_fastq_screen.log"
-#    shell:"""
-#        fastq_screen {input.fastq_merged} --aligner {params.aligner} \
-#            --conf {params.fastq_screen_config} --outdir {params.outdir} \
-#            -threads {threads} 2> {log}
-#    """
+rule fastq_screen:
+    input: 
+        fastq_merged = expand("data/merged/{sample}.fastq.gz", sample = config["sample"])
+    output: 
+        fastq_screen_txt = "results/QC/fastq_screen/{sample}_fastq_screen.txt",
+        fastq_screen_png = "results/QC/fastq_screen/{sample}_fastq_screen.png"
+    params:
+        fastq_screen_config = config["fastq_screen_conf"],
+        aligner = config["fastq_screen_aling"],
+        outdir = "results/QC/fastq_screen/"
+    conda:
+        config["conda_envs"]["rna_seq_3_v2"]
+    threads: 1
+    resources:
+        mem_mb=28728
+    log:
+        log = "log/QC/fastq_screen/{sample}_fastq_screen.log"
+    shell:"""
+        fastq_screen {input.fastq_merged} --aligner {params.aligner} \
+            --conf {params.fastq_screen_config} --outdir {params.outdir} \
+            -threads {threads} 2> {log}
+    """
 
 rule alignment:
     input: 
@@ -226,8 +226,8 @@ rule feature_counts:
 rule multiqc:
     input: 
         seqs_QC = expand("results/QC/qc_per_lane/{seqs_state}/{sample}_{seq_lane}_{seqs_state}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"], seqs_state = config["seqs_state"]),
-        #fastq_screen_txt = expand("results/QC/fastq_screen/{sample}_{condition}/{sample}_{condition}_merged_screen.txt", sample = config["sample"], condition = config["condition"]),
-        #fastq_screen_png = expand("results/QC/fastq_screen/{sample}_{condition}/{sample}_{condition}_merged_screen.png", sample = config["sample"], condition = config["condition"]),
+        fastq_screen_txt = expand("results/QC/fastq_screen/{sample}/{sample}_fastq_screen.txt", sample = config["sample"]),
+        fastq_screen_png = expand("results/QC/fastq_screen/{sample}/{sample}_fastq_screen.png", sample = config["sample"]),
         bam_QC = expand("results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
         #qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}_{condition}/qualimapReport.html", sample = config["sample"], condition = config["condition"]),
         #qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}_{condition}/genome_results.txt", sample = config["sample"], condition = config["condition"]),
