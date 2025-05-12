@@ -3,25 +3,27 @@ conda_envs:
   rna_seq_3: "envs/rna_seq_3.yml"
   rna_seq_3_v2 : "envs/rna_seq_3_v2.yml"
 
+sample:
+  - MEC1-MYC-OE-S1
+  - MEC1-MYC-OE-S2
+  - MEC1-MYC-OE-S3
+  - MEC1-MYC-WT-S1
+  - MEC1-MYC-WT-S2
+  - MEC1-MYC-WT-S3
+  - PGA-MYC-OE-COMBO
+  - PGA-MYC-OE-S1
+  - PGA-MYC-OE-S2
+  - PGA-MYC-OE-S3
+  - PGA-MYC-WT-S1
+  - PGA-MYC-WT-S2
+  - PGA-MYC-WT-S3
+
 seqs_state:
   - raw
   - trimmed
 
-condition:
-  - butyrate
-  - control
-
-sample:
-  - DS21
-  - DS22
-  - DS24
-  - DS25
-
 seq_lane:
-  - L001
-  - L002
-  - L003
-  - L004
+  - L008
 
 fastq_screen:
   - aligner: bowtie2

@@ -28,7 +28,7 @@ rule fastqc:
 
 rule bbduk_se:
     input:
-        sample = "data/{seqs_state}/{sample}_{seq_lane}_{seqs_state}.fastq.gz",
+        sample = "data/raw/{sample}_{seq_lane}_raw.fastq.gz",
         adapters = "resources/trim_files/adapters.fa.gz",
         polyA = "resources/trim_files/polyA.fa.gz"
     output:
@@ -55,7 +55,7 @@ rule bbduk_se:
 rule merged_fastq:
     input: 
         lambda wildcards: expand(
-            fastq_trim = "data/trimmed/{sample}_{seq_lane}_trimmed.fastq.gz",
+            "data/trimmed/{sample}_{seq_lane}_trimmed.fastq.gz",
             sample = wildcards.sample,
             seq_lane = config["seq_lane"]
         )
@@ -70,21 +70,21 @@ rule merged_fastq:
 
 # rule fastq_screen:
 #    input: 
-#        fastq_merged = "data/merged/{sample}_{condition}_merged.fastq.gz"
+#        fastq_merged = "data/merged/{sample}.fastq.gz"
 #    output: 
-#        fastq_screen_txt = "results/QC/fastq_screen/{sample}_{condition}/{sample}_{condition}_merged_screen.txt",
-#        fastq_screen_png = "results/QC/fastq_screen/{sample}_{condition}/{sample}_{condition}_merged_screen.png"
+#        fastq_screen_txt = "results/QC/fastq_screen/{sample}_fastq_screen.txt",
+#        fastq_screen_png = "results/QC/fastq_screen/{sample}_fastq_screen.png"
 #    params:
 #        fastq_screen_config = config["fastq_screen_conf"],
 #        aligner = config["fastq_screen_aling"],
-#        outdir = "results/QC/fastq_screen/{sample}_{condition}"
+#        outdir = "results/QC/fastq_screen/"
 #    conda:
 #        config["conda_envs"]["rna_seq_3_v2"]
 #    threads: 1
 #    resources:
 #        mem_mb=28728
 #    log:
-#        log = "log/QC/fastq_screen/{sample}_{condition}_fastq_screen.log"
+#        log = "log/QC/fastq_screen/{sample}_fastq_screen.log"
 #    shell:"""
 #        fastq_screen {input.fastq_merged} --aligner {params.aligner} \
 #            --conf {params.fastq_screen_config} --outdir {params.outdir} \
