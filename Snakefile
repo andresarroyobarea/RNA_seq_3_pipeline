@@ -5,6 +5,7 @@ import os
 rule all:
     input:
         "results/feature_counts/counts_raw.tsv",
+        "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html",
         "results/MultiQC/multiqc_report.html"
 
 rule fastqc:
@@ -132,29 +133,49 @@ rule fastqc_alignment:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.bam} 2> {log} "
 
-# rule qualimap_bamqc:
-#    input:
-#        bam_sorted = "results/alignment/{sample}_{condition}/{sample}_{condition}Aligned.sortedByCoord.out.bam"
-#    output:
-#        "results/QC/alignment/qualimap/bamqc/{sample}_{condition}/qualimapReport.html",
-#        "results/QC/alignment/qualimap/bamqc/{sample}_{condition}/genome_results.txt",
-#    params:
-#        qmap_genome = config["qualimap"]["genome"],
-#        annotation = config["annotation"],
-#        outdir = "results/QC/alignment/qualimap/bamqc/{sample}_{condition}",
-#        mem = config["qualimap"]["mem"]
-#    resources:
-#        mem_mb=26624
-#    log: 
-#        "log/QC/alignment/qualimap/bamqc/{sample}_{condition}_qualimap_bamqc.log"
-#    conda:
-#        config["conda_envs"]["rna_seq_3_v2"]
-#    threads: 3
-#    shell: """
-#        qualimap bamqc -bam {input.bam_sorted} -gd {params.qmap_genome} -gff {params.annotation} \
-#            -hm 3 -nr 1000 -nt {threads} --outdir {params.outdir} -p strand-specific-forward \
-#            --java-mem-size={params.mem} 2> {log}
-#    """
+# Valorar si incluir la regla MULTI-SAMPLE BAM.
+rule qualimap_bamqc:
+    input:
+        bam_sorted = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+    output:
+        qmap_report = "results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html",
+        genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt",
+    params:
+        qmap_genome = config["qualimap"]["genome"],
+        annotation = config["annotation"],
+        outdir = "results/QC/alignment/qualimap/bamqc/{sample}",
+        mem = config["qualimap"]["mem"]
+    resources:
+        mem_mb=26624
+    log: 
+        "log/QC/alignment/qualimap/bamqc/{sample}_qualimap_bamqc.log"
+    conda:
+        config["conda_envs"]["rna_seq_3_v2"]
+    threads: 3
+    shell: """
+        qualimap bamqc -bam {input.bam_sorted} -gd {params.qmap_genome} -gff {params.annotation} \
+            -hm 3 -nr 1000 -nt {threads} --outdir {params.outdir} -p strand-specific-forward \
+            --java-mem-size={params.mem} 2> {log}
+    """
+
+rule qualimap_multi_bamqc:
+    input:
+        expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"])
+    output:
+        "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html"
+    params: 
+        qmap_input = "metadata/qualimap_multi_bamqc_input.txt",
+        outdir = "results/QC/alignment/qualimap/multi_bamqc"
+    resources:
+        mem_mb=26624
+    log: 
+        "log/QC/alignment/qualimap/mutli_bamqc/qualimap_multi_bamqc.log"
+    conda:
+        config["conda_envs"]["rna_seq_3_v2"]
+    threads: 3    
+    shell:
+        "qualimap multi-bamqc -d {params.qmap_input} --outdir {params.outdir} 2> {log} "
+
 
 #rule qualimap_rnaseq:
 #    input:  
@@ -223,14 +244,15 @@ rule feature_counts:
             -o {output.feature_table} {input.bam} 2> {log}
     """
 
+
 rule multiqc:
     input: 
         seqs_QC = expand("results/QC/qc_per_lane/{seqs_state}/{sample}_{seq_lane}_{seqs_state}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"], seqs_state = config["seqs_state"]),
         fastq_screen_txt = expand("results/QC/fastq_screen/{sample}/{sample}_fastq_screen.txt", sample = config["sample"]),
         fastq_screen_png = expand("results/QC/fastq_screen/{sample}/{sample}_fastq_screen.png", sample = config["sample"]),
         bam_QC = expand("results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
-        #qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}_{condition}/qualimapReport.html", sample = config["sample"], condition = config["condition"]),
-        #qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}_{condition}/genome_results.txt", sample = config["sample"], condition = config["condition"]),
+        qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"]),
+        qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt", sample = config["sample"]),
         #qmap_rnaseq_html = expand("results/QC/alignment/qualimap/rnaseq/{sample}_{condition}/qualimapReport.html", sample = config["sample"], condition = config["condition"]),
         #qmap_rnaseq_txt = expand("results/QC/alignment/qualimap/rnaseq/{sample}_{condition}/rnaseq_qc_results.txt", sample = config["sample"], condition = config["condition"]),
         samtools_stats = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats", sample = config["sample"]),
