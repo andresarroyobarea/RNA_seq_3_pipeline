@@ -8,7 +8,7 @@ UMIs = config["umi_processing"]["enabled"]
 if UMIs:
     dir_in_trim = "results/umi_extract"
 else:
-    dir_in_trim = "data/raw"
+    dir_in_trim = "data/"
 
 ## Let stablish the path for BAM files in each case
 if UMIs:
@@ -18,7 +18,7 @@ else:
 
 rule all:
     input:
-        "results/feature_counts/counts_raw.tsv",
+        "results/feature_counts/counts.tsv",
         "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html",
         "results/MultiQC/multiqc_report.html"
 
@@ -26,8 +26,8 @@ rule fastqc_raw:
     input: 
         fastq = "data/{sample}_{seq_lane}.fastq.gz"
     output:
-        html = "results/QC/raw/qc_per_lane/{sample}_{seq_lane}_fastqc.html",
-        zip = "results/QC/raw/qc_per_lane/{sample}_{seq_lane}_fastqc.zip",
+        html = "results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.html",
+        zip = "results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.zip",
     log:
         fastqc = "log/QC/raw/qc_per_lane/{sample}_{seq_lane}_fastqc.log",
     params: 
@@ -41,7 +41,7 @@ rule fastqc_raw:
 
 rule bbduk_se:
     input:
-        sample = [dir_in_trim + "/{sample}_{seq_lane}_raw.fastq.gz"]
+        sample = [dir_in_trim + "/{sample}_{seq_lane}.fastq.gz"]
     output:
         trimmed = "results/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz",
         singleton = "results/trimmed/{sample}/{sample}_{seq_lane}_single.fastq.gz",
@@ -275,7 +275,7 @@ rule feature_counts:
     input:
         bam = expand(aligned_reads, sample = config["sample"])
     output: 
-        feature_table = "results/feature_counts/counts_raw.tsv" 
+        feature_table = "results/feature_counts/counts.tsv" 
     params:
         annotations = config["annotation"]
     conda: 
@@ -290,7 +290,8 @@ rule feature_counts:
 
 rule multiqc:
     input: 
-        seqs_QC = expand("results/QC/qc_per_lane/{seqs_state}/{sample}_{seq_lane}_{seqs_state}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"], seqs_state = config["seqs_state"]),
+        seqs_QC_raw = expand("results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
+        seqs_QC_trim = expand("results/QC/trimmed/qc_per_lane/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
         fastq_screen_txt = expand("results/QC/fastq_screen/{sample}/{sample}_fastq_screen.txt", sample = config["sample"]),
         fastq_screen_png = expand("results/QC/fastq_screen/{sample}/{sample}_fastq_screen.png", sample = config["sample"]),
         bam_QC = expand("results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
@@ -317,21 +318,21 @@ if UMIs:
 
     rule umi_extract:
         input:
-            "data/raw/{sample}_{seq_lane}_raw.fastq.gz"
+            "data/{sample}_{seq_lane}.fastq.gz"
         output:
-            "results/umi_extract/{sample}_{seq_lane}_raw.fastq.gz"
+            "results/umi_extract/{sample}_{seq_lane}.fastq.gz"
         conda:
             config["conda_envs"]["rna_seq_3_v2"]
         threads: 3
         resources:
             mem_mb=15000
         params:
-            config["umi_processing"]["pattern"]
+            pattern = lambda wildcards: config["umi_processing"]["pattern"]
         log:
             "log/umi_extract/{sample}_{seq_lane}.log"
         shell: """
-            umi_tools extract --stdin={input.fastq} \
-                --extract-method regex --bc-pattern={params} \
+            umi_tools extract --stdin={input} \
+                --extract-method regex --bc-pattern={params.pattern} \
                 --log={log} --stdout={output}
         """
 
