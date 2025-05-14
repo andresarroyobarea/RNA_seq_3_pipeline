@@ -134,7 +134,7 @@ rule bam_indexing:
 
 rule fastqc_alignment:
     input:
-        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+        bam = aligned_reads
     output:
         html = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html",
         zip = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.zip",
@@ -151,7 +151,7 @@ rule fastqc_alignment:
 
 rule qualimap_bamqc:
     input:
-        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+        bam = aligned_reads
     output:
         qmap_report = "results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html",
         genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt",
@@ -194,7 +194,7 @@ rule qualimap_multi_bamqc:
 
 rule qualimap_rnaseq:
     input:  
-        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+        bam = aligned_reads
     output: 
         "results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html",
         "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
@@ -214,7 +214,7 @@ rule qualimap_rnaseq:
 
 rule rseqc_strand:
     input: 
-        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+        bam = aligned_reads
     output: 
         rseqc_out = "results/QC/alignment/rseqc/{sample}_strandiness.txt"
     params:
@@ -228,7 +228,7 @@ rule rseqc_strand:
 
 rule samtools_stats_flagstat:
     input:
-        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+        bam = aligned_reads
     output:
         samtools_stats = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats",
         samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat"
@@ -244,7 +244,7 @@ rule samtools_stats_flagstat:
 
 rule feature_counts:
     input:
-        bam = expand("results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam", sample = config["sample"])
+        bam = expand(aligned_reads, sample = config["sample"])
     output: 
         feature_table = "results/feature_counts/counts_raw.tsv" 
     params:
@@ -294,7 +294,6 @@ if UMIs:
     aligned_reads = "results/alignment/dedup/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
 else:
     aligned_reads = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
-
 
 ## Let stablish specific rules to deal with UMIs.
 if UMIs:
