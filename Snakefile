@@ -289,13 +289,17 @@ if UMIs:
 else:
     dir_in_trim = "raw"
 
-
+## Let stablish the path for BAM files in each case
+if UMIs:
+    aligned_reads = "results/alignment/dedup/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+else:
+    aligned_reads = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
 
 
 ## Let stablish specific rules to deal with UMIs.
 if UMIs:
 
-    rule umi_tools_extract:
+    rule umi_extract:
         input:
             "data/raw/{sample}_{seq_lane}_raw.fastq.gz"
         output:
@@ -315,7 +319,22 @@ if UMIs:
                 --log={log} --stdout={output}
         """
 
-
-
-# AÑADIR REGLA CONDICIONAL DE UMI-TOOLS ---> UMI-TOOLS DEDUPLICATION AFTER ALIGMENT.
-#rule umi_tools_dedup:
+    rule umi_dedup:
+        input:
+            bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam",
+            bam_bai = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam.bai"
+        output:
+            dedup = "results/alignment/dedup/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+        conda:
+            config["conda_envs"]["rna_seq_3_v2"]
+        threads: 3
+        resources:
+            mem_mb=10000
+        params:
+            stats = "results/dedup/alignments/{sample}"
+        log:
+            "log/dedup/{sample}.log"
+        shell:"""
+            umi_tools dedup -I {input.bam} --log={log} -S {output.dedup} --output-stats={params.stats} \
+                --method=unique --multimapping-detection-method=NH
+        """
