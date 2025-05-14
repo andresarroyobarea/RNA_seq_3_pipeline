@@ -2,6 +2,8 @@ configfile: "config/config.yaml"
 
 import os
 
+UMIs = config["umi_processing"]["enabled"]
+
 rule all:
     input:
         "results/feature_counts/counts_raw.tsv",
@@ -24,10 +26,6 @@ rule fastqc:
     shell:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
-
-# AÑADIR REGLA CONDICIONAL DE UMI-TOOLS ---> UMI-TOOLS EXTRACT.
-#rule umi_tools_extract:
-
 
 rule bbduk_se:
     input:
@@ -117,9 +115,6 @@ rule alignment:
             --outSAMattributes NH HI AS NM MD --outSAMtype BAM SortedByCoordinate \
             --outFileNamePrefix {params.outdir} 2> {log}
     """
-
-# AÑADIR REGLA CONDICIONAL DE UMI-TOOLS ---> UMI-TOOLS DEDUPLICATION AFTER ALIGMENT.
-#rule umi_tools_dedup:
 
 rule fastqc_alignment:
     input:
@@ -272,3 +267,36 @@ rule multiqc:
     shell: 
         "multiqc {input} -o {params.outdir} 2> {log.log} "
 
+## Let stablish where the trimming input will be saved.
+if UMIs:
+    dir_in_trim = "umi_extract"
+else:
+    dir_in_trim = "raw"
+
+## Let stablish specific rules to deal with UMIs.
+if UMIs:
+
+rule umi_tools_extract:
+    input:
+        "data/raw/{sample}_{seq_lane}_raw.fastq.gz"
+    output:
+        "data/umi_extract/{sample}_{seq_lane}_raw.fastq.gz"
+    conda:
+        config["conda_envs"]["rnrna_seq_3_v2"]
+    threads: 3
+    resources:
+        mem_mb=15000
+    params:
+        config["umi_processing"]["pattern"]
+    log:
+        "log/umi_extract/{sample}_{seq_lane}.log"
+    shell: """
+        umi_tools extract --stdin={input.fastq} \
+            --extract-method regex --bc-pattern={params} \
+            --log={log} --stdout={output}
+    """
+
+
+
+# AÑADIR REGLA CONDICIONAL DE UMI-TOOLS ---> UMI-TOOLS DEDUPLICATION AFTER ALIGMENT.
+#rule umi_tools_dedup:
