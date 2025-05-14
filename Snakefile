@@ -25,7 +25,9 @@ rule fastqc:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
 
-# AÑADIR REGLA CONDICIONAL DE UMI-TOOLS
+# AÑADIR REGLA CONDICIONAL DE UMI-TOOLS ---> UMI-TOOLS EXTRACT.
+#rule umi_tools_extract:
+
 
 rule bbduk_se:
     input:
@@ -115,6 +117,9 @@ rule alignment:
             --outSAMattributes NH HI AS NM MD --outSAMtype BAM SortedByCoordinate \
             --outFileNamePrefix {params.outdir} 2> {log}
     """
+
+# AÑADIR REGLA CONDICIONAL DE UMI-TOOLS ---> UMI-TOOLS DEDUPLICATION AFTER ALIGMENT.
+#rule umi_tools_dedup:
 
 rule fastqc_alignment:
     input:
