@@ -29,19 +29,20 @@ rule fastqc:
 
 rule bbduk_se:
     input:
-        sample = "data/raw/{sample}_{seq_lane}_raw.fastq.gz",
-        adapters = "resources/trim_files/adapters.fa.gz",
-        polyA = "resources/trim_files/polyA.fa.gz"
+        sample = ["data/ + dir_in_trim + /{sample}_{seq_lane}_raw.fastq.gz"]
     output:
-        trimmed = "data/trimmed/{sample}_{seq_lane}_trimmed.fastq.gz",
-        singleton = "data/trimmed/{sample}_{seq_lane}_single.fastq.gz",
-        discarded = "data/trimmed/{sample}_{seq_lane}_discarded.fastq.gz",
-        stats = "data/trimmed/{sample}_{seq_lane}_stats.txt",
+        trimmed = "data/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz",
+        singleton = "data/trimmed/{sample}/{sample}_{seq_lane}_single.fastq.gz",
+        discarded = "data/trimmed/{sample}/{sample}_{seq_lane}_discarded.fastq.gz",
+        stats = "data/trimmed/{sample}/{sample}_{seq_lane}_stats.txt",
     log:
         "log/bbduk/{sample}_{seq_lane}_bbduk.log"
     conda: 
         config["conda_envs"]["rna_seq_3"]
     threads: 2
+    params:
+        adapters = "resources/trim_files/adapters.fa.gz",
+        polyA = "resources/trim_files/polyA.fa.gz"
     shell:
         """
         bbduk.sh in={input.sample} \
@@ -49,8 +50,8 @@ rule bbduk_se:
             outs={output.singleton} \
             outm={output.discarded} \
             stats={output.stats} \
-            ref={input.adapters},{input.polyA} \
-            k=13 ktrim=r mink=5 qtrim=r trimq=20 minlength=20 > {log} 2>&1
+            ref={params.adapters},{params.polyA} \
+            k=13 ktrim=r mink=5 qtrim=r trimq=20 useshortkmers=t minlength=20 > {log} 2>&1
         """
 
 rule merged_fastq:
@@ -276,25 +277,25 @@ else:
 ## Let stablish specific rules to deal with UMIs.
 if UMIs:
 
-rule umi_tools_extract:
-    input:
-        "data/raw/{sample}_{seq_lane}_raw.fastq.gz"
-    output:
-        "data/umi_extract/{sample}_{seq_lane}_raw.fastq.gz"
-    conda:
-        config["conda_envs"]["rnrna_seq_3_v2"]
-    threads: 3
-    resources:
-        mem_mb=15000
-    params:
-        config["umi_processing"]["pattern"]
-    log:
-        "log/umi_extract/{sample}_{seq_lane}.log"
-    shell: """
-        umi_tools extract --stdin={input.fastq} \
-            --extract-method regex --bc-pattern={params} \
-            --log={log} --stdout={output}
-    """
+    rule umi_tools_extract:
+        input:
+            "data/raw/{sample}_{seq_lane}_raw.fastq.gz"
+        output:
+            "data/umi_extract/{sample}_{seq_lane}_raw.fastq.gz"
+        conda:
+            config["conda_envs"]["rnrna_seq_3_v2"]
+        threads: 3
+        resources:
+            mem_mb=15000
+        params:
+            config["umi_processing"]["pattern"]
+        log:
+            "log/umi_extract/{sample}_{seq_lane}.log"
+        shell: """
+            umi_tools extract --stdin={input.fastq} \
+                --extract-method regex --bc-pattern={params} \
+                --log={log} --stdout={output}
+        """
 
 
 
