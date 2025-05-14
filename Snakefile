@@ -57,7 +57,7 @@ rule bbduk_se:
 rule merged_fastq:
     input: 
         lambda wildcards: expand(
-            "data/trimmed/{sample}_{seq_lane}_trimmed.fastq.gz",
+            "data/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz",
             sample = wildcards.sample,
             seq_lane = config["seq_lane"]
         )
@@ -97,10 +97,10 @@ rule alignment:
     input: 
         fastq_merged = "data/merged/{sample}.fastq.gz"
     output: 
-        bam_sorted = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     params:
         genome_index = config["genome_index"],
-        outdir = lambda wildcards, output: os.path.dirname(output.bam_sorted)
+        outdir = lambda wildcards, output: os.path.dirname(output.bam)
     conda:
         config["conda_envs"]["rna_seq_3"]
     threads: 5
@@ -116,6 +116,21 @@ rule alignment:
             --outSAMattributes NH HI AS NM MD --outSAMtype BAM SortedByCoordinate \
             --outFileNamePrefix {params.outdir} 2> {log}
     """
+
+rule bam_indexing:
+    input:
+        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+    output:
+        bam_bai = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam.bai"
+    log:
+        "log/bam_indexing/{sample}.log"
+    threads: 3
+    resources:
+        mem_mb=3
+    conda:
+        config["conda_envs"]["rna_seq_3"]
+    shell:
+        "samtools index -@ {threads} {input.bam} "
 
 rule fastqc_alignment:
     input:
@@ -273,6 +288,9 @@ if UMIs:
     dir_in_trim = "umi_extract"
 else:
     dir_in_trim = "raw"
+
+
+
 
 ## Let stablish specific rules to deal with UMIs.
 if UMIs:
