@@ -242,7 +242,7 @@ rule qualimap_bamqc:
     params:
         qmap_genome = config["qualimap"]["genome"],
         annotation = config["annotation"],
-        outdir = "results/QC/alignment/qualimap/bamqc/{sample}",
+        outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
         mem = config["qualimap"]["mem"]
     log: 
         "log/QC/alignment/qualimap/bamqc/{sample}_qualimap_bamqc.log"
@@ -258,7 +258,7 @@ rule qualimap_multi_bamqc:
     input:
         expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"])
     output:
-        "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html"
+        qmap_report = "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html"
     conda:
         config["conda_envs"]["qualimap"]
     threads: 3
@@ -266,7 +266,7 @@ rule qualimap_multi_bamqc:
         mem_mb=26624
     params: 
         qmap_input = "metadata/qualimap_multi_bamqc_input.txt",
-        outdir = "results/QC/alignment/qualimap/multi_bamqc"
+        outdir = lambda wildcards, output: os.path.dirname(output.qmap_report)
     log: 
         "log/QC/alignment/qualimap/mutli_bamqc/qualimap_multi_bamqc.log"
     benchmark:
@@ -279,13 +279,13 @@ rule qualimap_rnaseq:
     input:  
         bam = aligned_reads
     output: 
-        "results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html",
-        "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
+        qmap_report = "results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html",
+        qmap_res = "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
     conda:
         config["conda_envs"]["qualimap"]
     params:
         annotation = config["annotation"],
-        outdir = "results/QC/alignment/qualimap/rnaseq/{sample}",
+        outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
         mem = config["qualimap"]["mem"]
     log:
         "log/QC/alignment/qualimap/rnaseq/{sample}_qualiamp_rnaseq.log"
