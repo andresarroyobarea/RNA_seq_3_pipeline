@@ -51,8 +51,8 @@ rule bbduk_se:
         config["conda_envs"]["preprocessing"]
     threads: 2
     params:
-        adapters = "resources/trim_files/adapters.fa.gz",
-        polyA = "resources/trim_files/polyA.fa.gz"
+        adapters = config["adapters"],
+        polyA = config["polyA"]
     log:
         "log/bbduk/{sample}_{seq_lane}_bbduk.log"
     benchmark:

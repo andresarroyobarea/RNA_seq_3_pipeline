@@ -38,6 +38,8 @@ annotation: resources/annotations/hg38/Homo_sapiens.GRCh38.111.gtf
 reference_bed: resources/annotations/hg38/Homo_sapiens.GRCh38.111.bed
 fastq_screen_conf: resources/fastq_screen_files/FastQ_Screen_Genomes/fastq_screen.conf
 fastq_screen_aling: bowtie2
+adapters: "resources/trim_files/adapters.fa.gz"
+polyA: "resources/trim_files/polyA.fa.gz"
 
 qualimap:
   genome: HUMAN
