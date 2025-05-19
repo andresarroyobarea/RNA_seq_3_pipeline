@@ -130,7 +130,7 @@ rule merged_fastq:
 
 rule fastqc_merged:
     input: 
-        fastq = "data/{sample}.fastq.gz"
+        fastq = "results/merged/{sample}.fastq.gz"
     output:
         html = "results/QC/merged/{sample}/{sample}_fastqc.html",
         zip = "results/QC/merged/{sample}/{sample}_fastqc.zip"

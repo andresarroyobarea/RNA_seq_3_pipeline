@@ -24,7 +24,7 @@ sample:
   - PGA-MYC-WT-S3
 
 umi_processing: 
-  enabled: True
+  enabled: False
   pattern: '^(?P<umi_1>.{6})(?P<discard_1>.{4}).*' 
 
 seq_lane:
