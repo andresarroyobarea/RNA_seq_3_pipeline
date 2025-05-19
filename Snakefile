@@ -41,31 +41,6 @@ rule fastqc_raw:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
 
-rule fastq_screen_raw:
-    input: 
-        fastq = expand("results/merged/{sample}_{seq_lane}.fastq.gz", sample = config["sample"], seq_lane = config["seq_lane"])
-    output: 
-        fastq_screen_txt = "results/fastq_screen/raw/{sample}/{sample}_{seq_lane}_fastq_screen.txt",
-        fastq_screen_png = "results/fastq_screen/raw/{sample}/{sample}_{seq_lane}_fastq_screen.png"
-    conda:
-        config["conda_envs"]["fastq_screen"]
-    threads: 1
-    resources:
-         mem_mb=28728
-    params:
-        fastq_screen_config = config["fastq_screen_conf"],
-        aligner = config["fastq_screen_aling"],
-        outdir = "results/QC/fastq_screen/"
-    log:
-        log = "log/QC/fastq_screen/{sample}_{seq_lane}_fastq_screen.log"
-    benchmark:
-        "benchmarks/{sample}_{seq_lane}_fastq_screen.bmk"
-    shell:"""
-        fastq_screen {input.fastq} --aligner {params.aligner} \
-            --conf {params.fastq_screen_config} --outdir {params.outdir} \
-            -threads {threads} 2> {log}
-    """
-
 rule bbduk_se:
     input:
         sample = [dir_in_trim + "/{sample}_{seq_lane}.fastq.gz"]
@@ -111,6 +86,31 @@ rule fastqc_trim:
     shell:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
+
+rule fastq_screen_files:
+    input: 
+        fastq = expand("results/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz", sample = config["sample"], seq_lane = config["seq_lane"])
+    output: 
+        fastq_screen_txt = "results/fastq_screen/files/{sample}/{sample}_{seq_lane}_fastq_screen.txt",
+        fastq_screen_png = "results/fastq_screen/files/{sample}/{sample}_{seq_lane}_fastq_screen.png"
+    conda:
+        config["conda_envs"]["fastq_screen"]
+    threads: 1
+    resources:
+         mem_mb=28728
+    params:
+        fastq_screen_config = config["fastq_screen_conf"],
+        aligner = config["fastq_screen_aling"],
+        outdir = "results/QC/fastq_screen/"
+    log:
+        log = "log/QC/fastq_screen/{sample}_{seq_lane}_fastq_screen.log"
+    benchmark:
+        "benchmarks/{sample}_{seq_lane}_fastq_screen.bmk"
+    shell:"""
+        fastq_screen {input.fastq} --aligner {params.aligner} \
+            --conf {params.fastq_screen_config} --outdir {params.outdir} \
+            -threads {threads} 2> {log}
+    """
 
 rule merged_fastq:
     input: 
@@ -349,19 +349,21 @@ rule feature_counts:
 rule multiqc_files:
     input: 
         seqs_QC_raw = expand("results/QC/raw/{sample}/{sample}_{seq_lane}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
-        fastq_screen_txt = expand("results/fastq_screen/raw/{sample}/{sample}_{seq_lane}_fastq_screen.txt", sample = config["sample"], seq_lane = config["seq_lane"]),
-        fastq_screen_png = expand("results/fastq_screen/raw/{sample}/{sample}_{seq_lane}_fastq_screen.png", sample = config["sample"], seq_lane = config["seq_lane"]),
+        fastq_screen_txt = expand("results/fastq_screen/files/{sample}/{sample}_{seq_lane}_fastq_screen.txt", sample = config["sample"], seq_lane = config["seq_lane"]),
+        fastq_screen_png = expand("results/fastq_screen/files/{sample}/{sample}_{seq_lane}_fastq_screen.png", sample = config["sample"], seq_lane = config["seq_lane"]),
         seqs_QC_trim = expand("results/QC/trimmed/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"])
     output:
         multiqc = "results/MultiQC/multiqc_report_files.html"
     conda: 
         config["conda_envs"]["qc"]
     params: 
-        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
+        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)#
     log:
         log = "log/MultiQC/multiqc_report_files.log",
     shell: 
         "multiqc {input} -o {params.outdir} 2> {log.log} "
+
+
 
 rule multiqc_global:
     input:
@@ -383,7 +385,7 @@ rule multiqc_global:
     params: 
         outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     log:
-        log = "log/MultiQC/multiqc_report.log",
+        log = "log/MultiQC/multiqc_report_global.log",
     shell: 
         "multiqc {input} -o {params.outdir} 2> {log.log} "
 
