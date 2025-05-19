@@ -55,6 +55,8 @@ rule bbduk_se:
         polyA = "resources/trim_files/polyA.fa.gz"
     log:
         "log/bbduk/{sample}_{seq_lane}_bbduk.log"
+    benchmark:
+        "benchmarks/{sample}_{seq_lane}_bbduk.bmk"
     shell:
         """
         bbduk.sh in={input.sample} \
@@ -116,6 +118,8 @@ rule fastq_screen:
         outdir = "results/QC/fastq_screen/"
     log:
         log = "log/QC/fastq_screen/{sample}_fastq_screen.log"
+    benchmark:
+        "benchmarks/{sample}_fastq_screen.bmk"
     shell:"""
         fastq_screen {input.fastq_merged} --aligner {params.aligner} \
             --conf {params.fastq_screen_config} --outdir {params.outdir} \
@@ -136,7 +140,9 @@ rule alignment:
         genome_index = config["genome_index"],
         outdir = lambda wildcards, output: os.path.dirname(output.bam)
     log:
-        "log/alignment/{sample}_alignment.log" 
+        "log/alignment/{sample}_alignment.log"
+    benchmark:
+        "benchmarks/{sample}_alignment.bmk"
     shell: """
         STAR --runThreadN {threads} --genomeDir {params.genome_index} --genomeLoad LoadAndKeep --readFilesIn {input.fastq_merged} \
             --readFilesCommand gunzip -c --outFilterType BySJout --outFilterMultimapNmax 25 --alignSJoverhangMin 8 \
@@ -194,6 +200,8 @@ rule qualimap_bamqc:
         mem = config["qualimap"]["mem"]
     log: 
         "log/QC/alignment/qualimap/bamqc/{sample}_qualimap_bamqc.log"
+    benchmark:
+        "benchmarks/{sample}_qualimap_bamqc.bmk"
     shell: """
         qualimap bamqc -bam {input.bam} -gd {params.qmap_genome} -gff {params.annotation} \
             -hm 3 -nr 1000 -nt {threads} --outdir {params.outdir} -p strand-specific-forward \
@@ -215,6 +223,8 @@ rule qualimap_multi_bamqc:
         outdir = "results/QC/alignment/qualimap/multi_bamqc"
     log: 
         "log/QC/alignment/qualimap/mutli_bamqc/qualimap_multi_bamqc.log"
+    benchmark:
+        "benchmarks/qualimap_multi_bamqc.bmk"
     shell:
         "qualimap multi-bamqc -d {params.qmap_input} --outdir {params.outdir} 2> {log} "
 
@@ -233,6 +243,8 @@ rule qualimap_rnaseq:
         mem = config["qualimap"]["mem"]
     log:
         "log/QC/alignment/qualimap/rnaseq/{sample}_qualiamp_rnaseq.log"
+    benchmark:
+        "benchmarks/{sample}_qualimap_rnaseq.bmk"
     shell:"""
         qualimap rnaseq -bam {input.bam} -gtf {params.annotation} \
             -outdir {params.outdir} -p strand-specific-forward \
@@ -280,6 +292,8 @@ rule feature_counts:
         annotations = config["annotation"]
     log:
         "log/featureCounts/featureCounts.log"
+    benchmark:
+        "benchmarks/subread_featureCounts.bmk"
     shell:"""
         featureCounts -a {params.annotations} -O -F GTF -t gene -g gene_id \
             --extraAttributes gene_name,transcript_name -s 1 -T 15 \
@@ -328,6 +342,8 @@ if UMIs:
             pattern = lambda wildcards: config["umi_processing"]["pattern"]
         log:
             "log/umi_extract/{sample}_{seq_lane}.log"
+        benchmark:
+            "benchmarks/{sample}_{seq_lane}_umi_tools_extract.bmk"
         shell: """
             umi_tools extract --stdin={input} \
                 --extract-method regex --bc-pattern={params.pattern} \
@@ -349,6 +365,8 @@ if UMIs:
             stats = "results/dedup/alignments/{sample}"
         log:
             "log/dedup/{sample}.log"
+        benchmark:
+            "benchmarks/{sample}_umi_tools_dedup.bmk"
         shell:"""
             umi_tools dedup -I {input.bam} --log={log} -S {output.dedup} --output-stats={params.stats} \
                 --method=unique --multimapping-detection-method=NH
