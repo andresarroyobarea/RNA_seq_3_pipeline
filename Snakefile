@@ -8,7 +8,7 @@ UMIs = config["umi_processing"]["enabled"]
 if UMIs:
     dir_in_trim = "results/umi_extract"
 else:
-    dir_in_trim = "data/"
+    dir_in_trim = "data"
 
 ## Let stablish the path for BAM files in each case
 if UMIs:
@@ -27,14 +27,14 @@ rule fastqc_raw:
         fastq = "data/{sample}_{seq_lane}.fastq.gz"
     output:
         html = "results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.html",
-        zip = "results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.zip",
-    log:
-        fastqc = "log/QC/raw/qc_per_lane/{sample}_{seq_lane}_fastqc.log",
-    params: 
-        outdir = lambda wildcards, output: os.path.dirname(output.html)
+        zip = "results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
     threads: 2
+    params: 
+        outdir = lambda wildcards, output: os.path.dirname(output.html)
+    log:
+        fastqc = "log/QC/raw/qc_per_lane/{sample}_{seq_lane}_fastqc.log"
     shell:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
@@ -46,15 +46,15 @@ rule bbduk_se:
         trimmed = "results/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz",
         singleton = "results/trimmed/{sample}/{sample}_{seq_lane}_single.fastq.gz",
         discarded = "results/trimmed/{sample}/{sample}_{seq_lane}_discarded.fastq.gz",
-        stats = "results/trimmed/{sample}/{sample}_{seq_lane}_stats.txt",
-    log:
-        "log/bbduk/{sample}_{seq_lane}_bbduk.log"
+        stats = "results/trimmed/{sample}/{sample}_{seq_lane}_stats.txt"
     conda: 
         config["conda_envs"]["rna_seq_3"]
     threads: 2
     params:
         adapters = "resources/trim_files/adapters.fa.gz",
         polyA = "resources/trim_files/polyA.fa.gz"
+    log:
+        "log/bbduk/{sample}_{seq_lane}_bbduk.log"
     shell:
         """
         bbduk.sh in={input.sample} \
@@ -72,13 +72,13 @@ rule fastqc_trim:
     output:
         html = "results/QC/trimmed/qc_per_lane/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html",
         zip = "results/QC/trimmed/qc_per_lane/{sample}/{sample}_{seq_lane}_trimmed_fastqc.zip",
-    log:
-        fastqc = "log/QC/trimmed/qc_per_lane/{sample}_{seq_lane}_trimmed_fastqc.log",
-    params: 
-        outdir = lambda wildcards, output: os.path.dirname(output.html)
     conda:
         config["conda_envs"]["qc"]
     threads: 2
+    params: 
+        outdir = lambda wildcards, output: os.path.dirname(output.html)
+    log:
+        fastqc = "log/QC/trimmed/qc_per_lane/{sample}_{seq_lane}_trimmed_fastqc.log"
     shell:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
@@ -105,15 +105,15 @@ rule fastq_screen:
     output: 
         fastq_screen_txt = "results/QC/fastq_screen/{sample}_fastq_screen.txt",
         fastq_screen_png = "results/QC/fastq_screen/{sample}_fastq_screen.png"
-    params:
-        fastq_screen_config = config["fastq_screen_conf"],
-        aligner = config["fastq_screen_aling"],
-        outdir = "results/QC/fastq_screen/"
     conda:
         config["conda_envs"]["rna_seq_3_v2"]
     threads: 1
     resources:
         mem_mb=28728
+    params:
+        fastq_screen_config = config["fastq_screen_conf"],
+        aligner = config["fastq_screen_aling"],
+        outdir = "results/QC/fastq_screen/"
     log:
         log = "log/QC/fastq_screen/{sample}_fastq_screen.log"
     shell:"""
@@ -127,14 +127,14 @@ rule alignment:
         fastq_merged = "results/merged/{sample}.fastq.gz"
     output: 
         bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
-    params:
-        genome_index = config["genome_index"],
-        outdir = lambda wildcards, output: os.path.dirname(output.bam)
     conda:
         config["conda_envs"]["rna_seq_3"]
     threads: 5
     resources:
         mem_mb=18432
+    params:
+        genome_index = config["genome_index"],
+        outdir = lambda wildcards, output: os.path.dirname(output.bam)
     log:
         "log/alignment/{sample}_alignment.log" 
     shell: """
@@ -151,13 +151,11 @@ rule bam_indexing:
         bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     output:
         bam_bai = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam.bai"
-    log:
-        "log/bam_indexing/{sample}.log"
-    threads: 3
-    resources:
-        mem_mb=3
     conda:
         config["conda_envs"]["rna_seq_3"]
+    threads: 3
+    log:
+        "log/bam_indexing/{sample}.log"
     shell:
         "samtools index -@ {threads} {input.bam} "
 
@@ -167,13 +165,13 @@ rule fastqc_alignment:
     output:
         html = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html",
         zip = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.zip",
-    log:
-        "log/QC/alignment/FastQC/{sample}_alignment_fastqc.log"
-    params: 
-        outdir = lambda wildcards, output : os.path.dirname(output.html)
     conda:
         config["conda_envs"]["qc"]
     threads: 5
+    params: 
+        outdir = lambda wildcards, output : os.path.dirname(output.html)
+    log:
+        "log/QC/alignment/FastQC/{sample}_alignment_fastqc.log"
     shell:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.bam} 2> {log} "
@@ -183,19 +181,19 @@ rule qualimap_bamqc:
         bam = aligned_reads
     output:
         qmap_report = "results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html",
-        genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt",
+        genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt"
+    conda:
+        config["conda_envs"]["rna_seq_3_v2"]
+    threads: 3
+    resources:
+        mem_mb=26624
     params:
         qmap_genome = config["qualimap"]["genome"],
         annotation = config["annotation"],
         outdir = "results/QC/alignment/qualimap/bamqc/{sample}",
         mem = config["qualimap"]["mem"]
-    resources:
-        mem_mb=26624
     log: 
         "log/QC/alignment/qualimap/bamqc/{sample}_qualimap_bamqc.log"
-    conda:
-        config["conda_envs"]["rna_seq_3_v2"]
-    threads: 3
     shell: """
         qualimap bamqc -bam {input.bam} -gd {params.qmap_genome} -gff {params.annotation} \
             -hm 3 -nr 1000 -nt {threads} --outdir {params.outdir} -p strand-specific-forward \
@@ -207,16 +205,16 @@ rule qualimap_multi_bamqc:
         expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"])
     output:
         "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html"
+    conda:
+        config["conda_envs"]["rna_seq_3_v2"]
+    threads: 3
+    resources:
+        mem_mb=26624
     params: 
         qmap_input = "metadata/qualimap_multi_bamqc_input.txt",
         outdir = "results/QC/alignment/qualimap/multi_bamqc"
-    resources:
-        mem_mb=26624
     log: 
         "log/QC/alignment/qualimap/mutli_bamqc/qualimap_multi_bamqc.log"
-    conda:
-        config["conda_envs"]["rna_seq_3_v2"]
-    threads: 3    
     shell:
         "qualimap multi-bamqc -d {params.qmap_input} --outdir {params.outdir} 2> {log} "
 
@@ -227,14 +225,14 @@ rule qualimap_rnaseq:
     output: 
         "results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html",
         "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
+    conda:
+        config["conda_envs"]["rna_seq_3_v2"]
     params:
         annotation = config["annotation"],
         outdir = "results/QC/alignment/qualimap/rnaseq/{sample}",
         mem = config["qualimap"]["mem"]
     log:
         "log/QC/alignment/qualimap/rnaseq/{sample}_qualiamp_rnaseq.log"
-    conda:
-        config["conda_envs"]["rna_seq_3_v2"]
     shell:"""
         qualimap rnaseq -bam {input.bam} -gtf {params.annotation} \
             -outdir {params.outdir} -p strand-specific-forward \
@@ -246,10 +244,10 @@ rule rseqc_strand:
         bam = aligned_reads
     output: 
         rseqc_out = "results/QC/alignment/rseqc/{sample}_strandiness.txt"
-    params:
-        bed_file = config["reference_bed"]
     conda: 
         config["conda_envs"]["rna_seq_3_v2"]
+    params:
+        bed_file = config["reference_bed"]
     log:
         "log/QC/alignment/rseqc/{sample}_rseqc.log"
     shell:
@@ -276,10 +274,10 @@ rule feature_counts:
         bam = expand(aligned_reads, sample = config["sample"])
     output: 
         feature_table = "results/feature_counts/counts.tsv" 
-    params:
-        annotations = config["annotation"]
     conda: 
         config["conda_envs"]["rna_seq_3"]
+    params:
+        annotations = config["annotation"]
     log:
         "log/featureCounts/featureCounts.log"
     shell:"""
@@ -304,10 +302,10 @@ rule multiqc:
         rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_strandiness.txt", sample = config["sample"])
     output:
         multiqc = "results/MultiQC/multiqc_report.html"
-    params: 
-        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     conda: 
         config["conda_envs"]["qc"]
+    params: 
+        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     log:
         log = "log/MultiQC/multiqc_report.log",
     shell: 

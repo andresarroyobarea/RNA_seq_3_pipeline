@@ -18,15 +18,15 @@ sample:
   - PGA-MYC-WT-S2
   - PGA-MYC-WT-S3
 
-seqs_state:
-  - raw
-  - trimmed
+umi_processing: 
+  enabled: True
+  pattern: '^(?P<umi_1>.{6})(?P<discard_1>.{4}).*' 
 
 seq_lane:
   - L008
 
 fastq_screen:
-  - aligner: bowtie2
+  aligner: bowtie2
 
 genome_index: resources/genome/hg38_genome_index
 annotation: resources/annotations/hg38/Homo_sapiens.GRCh38.111.gtf
