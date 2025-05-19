@@ -1,7 +1,12 @@
 conda_envs: 
-  qc: "envs/qc.yml"
-  rna_seq_3: "envs/rna_seq_3.yml"
-  rna_seq_3_v2 : "envs/rna_seq_3_v2.yml"
+  qc: "envs/qc.yaml"
+  umi_tools: "envs/umi_tools.yaml"
+  preprocessing: "envs/preprocessing.yaml"
+  fastq_screen: "envs/fastq_screen.yaml"
+  aligners: "envs/aligners.yaml"
+  qualimap: "envs/qualimap.yaml"
+  rseqc: "envs/rseqc.yaml"
+  quantification: "envs/quantification.yaml"
 
 sample:
   - MEC1-MYC-OE-S1

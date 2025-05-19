@@ -48,7 +48,7 @@ rule bbduk_se:
         discarded = "results/trimmed/{sample}/{sample}_{seq_lane}_discarded.fastq.gz",
         stats = "results/trimmed/{sample}/{sample}_{seq_lane}_stats.txt"
     conda: 
-        config["conda_envs"]["rna_seq_3"]
+        config["conda_envs"]["preprocessing"]
     threads: 2
     params:
         adapters = "resources/trim_files/adapters.fa.gz",
@@ -95,7 +95,7 @@ rule merged_fastq:
     output: 
         fastq_merged = "results/merged/{sample}.fastq.gz"
     conda: 
-        config["conda_envs"]["rna_seq_3"]
+        config["conda_envs"]["qc"]
     log:
         "log/merged/{sample}_merging.log"
     shell:
@@ -108,7 +108,7 @@ rule fastq_screen:
         fastq_screen_txt = "results/QC/fastq_screen/{sample}_fastq_screen.txt",
         fastq_screen_png = "results/QC/fastq_screen/{sample}_fastq_screen.png"
     conda:
-        config["conda_envs"]["rna_seq_3_v2"]
+        config["conda_envs"]["fastq_screen"]
     threads: 1
     resources:
         mem_mb=28728
@@ -132,7 +132,7 @@ rule alignment:
     output: 
         bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     conda:
-        config["conda_envs"]["rna_seq_3"]
+        config["conda_envs"]["aligners"]
     threads: 5
     resources:
         mem_mb=18432
@@ -158,7 +158,7 @@ rule bam_indexing:
     output:
         bam_bai = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam.bai"
     conda:
-        config["conda_envs"]["rna_seq_3"]
+        config["conda_envs"]["aligners"]
     threads: 3
     log:
         "log/bam_indexing/{sample}.log"
@@ -189,7 +189,7 @@ rule qualimap_bamqc:
         qmap_report = "results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html",
         genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt"
     conda:
-        config["conda_envs"]["rna_seq_3_v2"]
+        config["conda_envs"]["qualimap"]
     threads: 3
     resources:
         mem_mb=26624
@@ -214,7 +214,7 @@ rule qualimap_multi_bamqc:
     output:
         "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html"
     conda:
-        config["conda_envs"]["rna_seq_3_v2"]
+        config["conda_envs"]["qualimap"]
     threads: 3
     resources:
         mem_mb=26624
@@ -236,7 +236,7 @@ rule qualimap_rnaseq:
         "results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html",
         "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
     conda:
-        config["conda_envs"]["rna_seq_3_v2"]
+        config["conda_envs"]["qualimap"]
     params:
         annotation = config["annotation"],
         outdir = "results/QC/alignment/qualimap/rnaseq/{sample}",
@@ -257,7 +257,7 @@ rule rseqc_strand:
     output: 
         rseqc_out = "results/QC/alignment/rseqc/{sample}_strandiness.txt"
     conda: 
-        config["conda_envs"]["rna_seq_3_v2"]
+        config["conda_envs"]["rseqc"]
     params:
         bed_file = config["reference_bed"]
     log:
@@ -272,7 +272,7 @@ rule samtools_stats_flagstat:
         samtools_stats = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats",
         samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat"
     conda:
-        config["conda_envs"]["rna_seq_3"]
+        config["conda_envs"]["aligners"]
     log:
         log_stats = "log/QC/alignment/samtools/{sample}_samtools_stats.log",
         log_flagstat = "log/QC/alignment/samtools/{sample}_samtools_flagstat.log"
@@ -287,7 +287,7 @@ rule feature_counts:
     output: 
         feature_table = "results/feature_counts/counts.tsv" 
     conda: 
-        config["conda_envs"]["rna_seq_3"]
+        config["conda_envs"]["quantification"]
     params:
         annotations = config["annotation"]
     log:
@@ -334,7 +334,7 @@ if UMIs:
         output:
             "results/umi_extract/{sample}_{seq_lane}.fastq.gz"
         conda:
-            config["conda_envs"]["rna_seq_3_v2"]
+            config["conda_envs"]["umi_tools"]
         threads: 3
         resources:
             mem_mb=15000
@@ -357,7 +357,7 @@ if UMIs:
         output:
             dedup = "results/alignment/dedup/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
         conda:
-            config["conda_envs"]["rna_seq_3_v2"]
+            config["conda_envs"]["umi_tools"]
         threads: 3
         resources:
             mem_mb=10000
