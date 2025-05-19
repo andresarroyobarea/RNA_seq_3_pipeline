@@ -2,6 +2,7 @@ configfile: "config/config.yaml"
 
 import os
 
+## Let read if there are UMIs in the sequences.
 UMIs = config["umi_processing"]["enabled"]
 
 ## Let stablish where the trimming input will be saved.
@@ -20,24 +21,50 @@ rule all:
     input:
         "results/feature_counts/counts.tsv",
         "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html",
-        "results/MultiQC/multiqc_report.html"
+        "results/MultiQC/multiqc_report_files.html",
+        "results/MultiQC/multiqc_report_global.html"
 
 rule fastqc_raw:
     input: 
         fastq = "data/{sample}_{seq_lane}.fastq.gz"
     output:
-        html = "results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.html",
-        zip = "results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.zip"
+        html = "results/QC/raw/{sample}/{sample}_{seq_lane}_fastqc.html",
+        zip = "results/QC/raw/{sample}/{sample}_{seq_lane}_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
     threads: 2
     params: 
         outdir = lambda wildcards, output: os.path.dirname(output.html)
     log:
-        fastqc = "log/QC/raw/qc_per_lane/{sample}_{seq_lane}_fastqc.log"
+        fastqc = "log/QC/raw/{sample}_{seq_lane}_fastqc.log"
     shell:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
+
+rule fastq_screen_raw:
+    input: 
+        fastq = expand("results/merged/{sample}_{seq_lane}.fastq.gz", sample = config["sample"], seq_lane = config["seq_lane"])
+    output: 
+        fastq_screen_txt = "results/fastq_screen/raw/{sample}/{sample}_{seq_lane}_fastq_screen.txt",
+        fastq_screen_png = "results/fastq_screen/raw/{sample}/{sample}_{seq_lane}_fastq_screen.png"
+    conda:
+        config["conda_envs"]["fastq_screen"]
+    threads: 1
+    resources:
+         mem_mb=28728
+    params:
+        fastq_screen_config = config["fastq_screen_conf"],
+        aligner = config["fastq_screen_aling"],
+        outdir = "results/QC/fastq_screen/"
+    log:
+        log = "log/QC/fastq_screen/{sample}_{seq_lane}_fastq_screen.log"
+    benchmark:
+        "benchmarks/{sample}_{seq_lane}_fastq_screen.bmk"
+    shell:"""
+        fastq_screen {input.fastq} --aligner {params.aligner} \
+            --conf {params.fastq_screen_config} --outdir {params.outdir} \
+            -threads {threads} 2> {log}
+    """
 
 rule bbduk_se:
     input:
@@ -72,8 +99,8 @@ rule fastqc_trim:
     input: 
         fastq = "results/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz"
     output:
-        html = "results/QC/trimmed/qc_per_lane/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html",
-        zip = "results/QC/trimmed/qc_per_lane/{sample}/{sample}_{seq_lane}_trimmed_fastqc.zip",
+        html = "results/QC/trimmed/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html",
+        zip = "results/QC/trimmed/{sample}/{sample}_{seq_lane}_trimmed_fastqc.zip",
     conda:
         config["conda_envs"]["qc"]
     threads: 2
@@ -101,12 +128,30 @@ rule merged_fastq:
     shell:
         "cat {input} > {output.fastq_merged} 2> {log}"
 
-rule fastq_screen:
+rule fastqc_merged:
+    input: 
+        fastq = "data/{sample}.fastq.gz"
+    output:
+        html = "results/QC/merged/{sample}/{sample}_fastqc.html",
+        zip = "results/QC/merged/{sample}/{sample}_fastqc.zip"
+    conda:
+        config["conda_envs"]["qc"]
+    threads: 2
+    params: 
+        outdir = lambda wildcards, output: os.path.dirname(output.html)
+    log:
+        fastqc = "log/QC/raw/qc_per_lane/{sample}_fastqc.log"
+    shell:
+        "mkdir -p {params.outdir} &&"
+        "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
+
+
+rule fastq_screen_merged:
     input: 
         fastq_merged = expand("results/merged/{sample}.fastq.gz", sample = config["sample"])
     output: 
-        fastq_screen_txt = "results/QC/fastq_screen/{sample}_fastq_screen.txt",
-        fastq_screen_png = "results/QC/fastq_screen/{sample}_fastq_screen.png"
+        fastq_screen_txt = "results/fastq_screen/merged/{sample}_fastq_screen.txt",
+        fastq_screen_png = "results/fastq_screen/merged/{sample}_fastq_screen.png"
     conda:
         config["conda_envs"]["fastq_screen"]
     threads: 1
@@ -126,6 +171,7 @@ rule fastq_screen:
             -threads {threads} 2> {log}
     """
 
+
 rule alignment:
     input: 
         fastq_merged = "results/merged/{sample}.fastq.gz"
@@ -135,7 +181,7 @@ rule alignment:
         config["conda_envs"]["aligners"]
     threads: 5
     resources:
-        mem_mb=18432
+        mem_mb=26432
     params:
         genome_index = config["genome_index"],
         outdir = lambda wildcards, output: os.path.dirname(output.bam)
@@ -300,12 +346,28 @@ rule feature_counts:
             -o {output.feature_table} {input.bam} 2> {log}
     """
 
-rule multiqc:
+rule multiqc_files:
     input: 
-        seqs_QC_raw = expand("results/QC/raw/qc_per_lane/{sample}/{sample}_{seq_lane}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
-        seqs_QC_trim = expand("results/QC/trimmed/qc_per_lane/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
-        fastq_screen_txt = expand("results/QC/fastq_screen/{sample}/{sample}_fastq_screen.txt", sample = config["sample"]),
-        fastq_screen_png = expand("results/QC/fastq_screen/{sample}/{sample}_fastq_screen.png", sample = config["sample"]),
+        seqs_QC_raw = expand("results/QC/raw/{sample}/{sample}_{seq_lane}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
+        fastq_screen_txt = expand("results/fastq_screen/raw/{sample}/{sample}_{seq_lane}_fastq_screen.txt", sample = config["sample"], seq_lane = config["seq_lane"]),
+        fastq_screen_png = expand("results/fastq_screen/raw/{sample}/{sample}_{seq_lane}_fastq_screen.png", sample = config["sample"], seq_lane = config["seq_lane"]),
+        seqs_QC_trim = expand("results/QC/trimmed/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"])
+    output:
+        multiqc = "results/MultiQC/multiqc_report_files.html"
+    conda: 
+        config["conda_envs"]["qc"]
+    params: 
+        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
+    log:
+        log = "log/MultiQC/multiqc_report_files.log",
+    shell: 
+        "multiqc {input} -o {params.outdir} 2> {log.log} "
+
+rule multiqc_global:
+    input:
+        seq_QC_merged = expand("results/QC/merged/{sample}/{sample}_fastqc.html", sample = config["sample"]),
+        fastq_screen_merged_txt = expand("results/fastq_screen/merged/{sample}/{sample}_fastq_screen.txt", sample = config["sample"]),
+        fastq_screen_merged_png = expand("results/fastq_screen/merged/{sample}/{sample}_fastq_screen.png", sample = config["sample"]),
         bam_QC = expand("results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
         qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"]),
         qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt", sample = config["sample"]),
@@ -315,7 +377,7 @@ rule multiqc:
         samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"]),
         rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_strandiness.txt", sample = config["sample"])
     output:
-        multiqc = "results/MultiQC/multiqc_report.html"
+        multiqc = "results/MultiQC/multiqc_report_global.html"
     conda: 
         config["conda_envs"]["qc"]
     params: 
@@ -324,6 +386,7 @@ rule multiqc:
         log = "log/MultiQC/multiqc_report.log",
     shell: 
         "multiqc {input} -o {params.outdir} 2> {log.log} "
+
 
 ## Let stablish specific rules to deal with UMIs.
 if UMIs:
