@@ -1,7 +1,6 @@
+name: umi-tools
 channels:
     - conda-forge
     - bioconda
-    - defaults  
 dependencies:
-    - fastqc
-    - multiqc
+    - umi_tools=1.1.6
