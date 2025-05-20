@@ -21,8 +21,9 @@ rule all:
     input:
         "results/feature_counts/counts.tsv",
         "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html",
-        "results/MultiQC/multiqc_report_files.html",
-        "results/MultiQC/multiqc_report_global.html"
+        "results/QC/MultiQC/raw/multiqc_report.html",
+        "results/QC/MultiQC/trimmed/multiqc_report.html",
+        "results/QC/MultiQC/merged/multiqc_report.html"
 
 rule fastqc_raw:
     input: 
@@ -74,25 +75,25 @@ rule fastqc_trim:
     input: 
         fastq = "results/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz"
     output:
-        html = "results/QC/trimmed/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html",
-        zip = "results/QC/trimmed/{sample}/{sample}_{seq_lane}_trimmed_fastqc.zip",
+        html = "results/QC/trimmed/fastqc/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html",
+        zip = "results/QC/trimmed/fastqc/{sample}/{sample}_{seq_lane}_trimmed_fastqc.zip",
     conda:
         config["conda_envs"]["qc"]
     threads: 2
     params: 
         outdir = lambda wildcards, output: os.path.dirname(output.html)
     log:
-        fastqc = "log/QC/trimmed/qc_per_lane/{sample}_{seq_lane}_trimmed_fastqc.log"
+        fastqc = "log/QC/trimmed/fastqc/{sample}_{seq_lane}_trimmed_fastqc.log"
     shell:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
 
 rule fastq_screen_files:
     input: 
-        fastq = expand("results/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz", sample = config["sample"], seq_lane = config["seq_lane"])
+        fastq = "results/trimmed/{sample}/{sample}_{seq_lane}_trimmed.fastq.gz"
     output: 
-        fastq_screen_txt = "results/fastq_screen/files/{sample}/{sample}_{seq_lane}_fastq_screen.txt",
-        fastq_screen_png = "results/fastq_screen/files/{sample}/{sample}_{seq_lane}_fastq_screen.png"
+        fastq_screen_txt = "results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.txt",
+        fastq_screen_png = "results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.png"
     conda:
         config["conda_envs"]["fastq_screen"]
     threads: 1
@@ -101,11 +102,11 @@ rule fastq_screen_files:
     params:
         fastq_screen_config = config["fastq_screen_conf"],
         aligner = config["fastq_screen_aling"],
-        outdir = "results/QC/fastq_screen/"
+        outdir = lambda wildcards, output: os.path.dirname(output.fastq_screen_txt)
     log:
-        log = "log/QC/fastq_screen/{sample}_{seq_lane}_fastq_screen.log"
+        log = "log/QC/trimmed/fastq_screen/{sample}_{seq_lane}_trimmed_screen.log"
     benchmark:
-        "benchmarks/{sample}_{seq_lane}_fastq_screen.bmk"
+        "benchmarks/{sample}_{seq_lane}_trimmed_screen.bmk"
     shell:"""
         fastq_screen {input.fastq} --aligner {params.aligner} \
             --conf {params.fastq_screen_config} --outdir {params.outdir} \
@@ -346,26 +347,39 @@ rule feature_counts:
             -o {output.feature_table} {input.bam} 2> {log}
     """
 
-rule multiqc_files:
+rule multiqc_raw:
     input: 
-        seqs_QC_raw = expand("results/QC/raw/{sample}/{sample}_{seq_lane}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
-        fastq_screen_txt = expand("results/fastq_screen/files/{sample}/{sample}_{seq_lane}_fastq_screen.txt", sample = config["sample"], seq_lane = config["seq_lane"]),
-        fastq_screen_png = expand("results/fastq_screen/files/{sample}/{sample}_{seq_lane}_fastq_screen.png", sample = config["sample"], seq_lane = config["seq_lane"]),
-        seqs_QC_trim = expand("results/QC/trimmed/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"])
+        seqs_QC_raw = expand("results/QC/raw/{sample}/{sample}_{seq_lane}_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"])
     output:
-        multiqc = "results/MultiQC/multiqc_report_files.html"
+        multiqc = "results/QC/MultiQC/raw/multiqc_report.html"
     conda: 
         config["conda_envs"]["qc"]
     params: 
-        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)#
+        inputdir = "results/QC/raw",
+        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     log:
-        log = "log/MultiQC/multiqc_report_files.log",
+        log = "log/QC/MultiQC/raw/multiqc_report.log"
     shell: 
-        "multiqc {input} -o {params.outdir} 2> {log.log} "
+        "multiqc {params.inputdir} -o {params.outdir} 2> {log.log} "
 
+rule multiqc_trimmed:
+    input: 
+        seqs_QC_trim = expand("results/QC/trimmed/fastqc/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
+        fastq_screen_txt = expand("results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.txt", sample = config["sample"], seq_lane = config["seq_lane"]),
+        fastq_screen_png = expand("results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.png", sample = config["sample"], seq_lane = config["seq_lane"])
+    output:
+        multiqc = "results/QC/MultiQC/trimmed/multiqc_report.html"
+    conda: 
+        config["conda_envs"]["qc"]
+    params:
+        inputdir = ["results/QC/trimmed", "results/trimmed", "log/bbduk"],
+        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
+    log:
+        log = "log/QC/MultiQC/trimmed/multiqc_report.log",
+    shell: 
+        "multiqc {params.inputdir} -o {params.outdir} 2> {log.log} "
 
-
-rule multiqc_global:
+rule multiqc_merge:
     input:
         seq_QC_merged = expand("results/QC/merged/{sample}/{sample}_fastqc.html", sample = config["sample"]),
         fastq_screen_merged_txt = expand("results/fastq_screen/merged/{sample}/{sample}_fastq_screen.txt", sample = config["sample"]),
@@ -379,13 +393,13 @@ rule multiqc_global:
         samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"]),
         rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_strandiness.txt", sample = config["sample"])
     output:
-        multiqc = "results/MultiQC/multiqc_report_global.html"
+        multiqc = "results/QC/MultiQC/merged/multiqc_report.html"
     conda: 
         config["conda_envs"]["qc"]
     params: 
         outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     log:
-        log = "log/MultiQC/multiqc_report_global.log",
+        log = "log/QC/MultiQC/multiqc_report_global.log",
     shell: 
         "multiqc {input} -o {params.outdir} 2> {log.log} "
 
@@ -411,7 +425,7 @@ if UMIs:
             "benchmarks/{sample}_{seq_lane}_umi_tools_extract.bmk"
         shell: """
             umi_tools extract --stdin={input} \
-                --extract-method regex --bc-pattern={params.pattern} \
+                --extract-method regex --bc-pattern="{params.pattern}" \
                 --log={log} --stdout={output}
         """
 
