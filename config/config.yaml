@@ -43,4 +43,59 @@ polyA: "resources/trim_files/polyA.fa.gz"
 
 qualimap:
   genome: HUMAN
-  mem: 18G
+
+resources:
+  default:
+    threads: 1
+    mem_mb: 4096
+    runtime: 10
+
+  fastqc:
+    threads: 2
+    mem_mb: 4096
+    runtime: 10
+
+  bbduk:
+    threads: 8
+    mem_mb: 8192
+    runtime: 60
+  
+  fastq_screen:
+    threads: 8
+    mem_mb: 10240
+    runtime: 10
+  
+  alignment:
+    threads: 8
+    mem_mb: 64000
+    runtime: 60
+  
+  bam_indexing:
+    threads: 8
+    mem_mb:  4096
+    runtime: 10
+  
+  qualimap:
+    threads: 8
+    mem_mb:  16384
+    runtime: 10
+  
+  rseqc_strand:
+    threads: 4
+    mem_mb:  8192
+    runtime: 10
+  
+  feature_counts:
+    threads: 8
+    mem_mb:  64000
+    runtime: 120
+  
+  umi_extract:
+    threads: 8
+    mem_mb: 8192
+    walltime: 60
+
+  umi_dedup:
+    threads: 8
+    mem_mb:  32000
+    runtime: 120

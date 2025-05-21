@@ -1,6 +1,19 @@
 configfile: "config/config.yaml"
 
+import glob
 import os
+import sys
+
+## GLOBAL FUNCIONS
+def get_resource(rule, resource) -> int:
+        '''
+        Function to parse config.yaml to retrieve computational resources for each rule. Returns an int
+        '''
+        try:
+                return config['resources'][rule][resource]
+        except KeyError:
+                print(f'Failed to get resource for {rule}/{resource}: using default parameters')
+                return config['resources']['default'][resource]
 
 ## Let read if there are UMIs in the sequences.
 UMIs = config["umi_processing"]["enabled"]
@@ -33,7 +46,10 @@ rule fastqc_raw:
         zip = "results/QC/raw/{sample}/{sample}_{seq_lane}_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
-    threads: 2
+    threads: get_resource("fastqc", "threads")
+    resources:
+        mem_mb = get_resource("fastqc", "mem_mb"),
+        runtime = get_resource("fastqc", "runtime")
     params: 
         outdir = lambda wildcards, output: os.path.dirname(output.html)
     log:
@@ -42,7 +58,7 @@ rule fastqc_raw:
         "mkdir -p {params.outdir} &&"
         "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
 
-rule bbduk_se:
+rule bbduk:
     input:
         sample = [dir_in_trim + "/{sample}_{seq_lane}.fastq.gz"]
     output:
@@ -52,7 +68,10 @@ rule bbduk_se:
         stats = "results/trimmed/{sample}/{sample}_{seq_lane}_stats.txt"
     conda: 
         config["conda_envs"]["preprocessing"]
-    threads: 2
+    threads: get_resource("bbduk", "threads")
+    resources:
+        mem_mb = get_resource("bbduk", "mem_mb"),
+        runtime = get_resource("bbduk", "runtime")
     params:
         adapters = config["adapters"],
         polyA = config["polyA"]
@@ -68,6 +87,7 @@ rule bbduk_se:
             outm={output.discarded} \
             stats={output.stats} \
             ref={params.adapters},{params.polyA} \
+            threads={threads} \
             k=13 ktrim=r mink=5 qtrim=r trimq=20 useshortkmers=t minlength=20 > {log} 2>&1
         """
 
@@ -79,7 +99,10 @@ rule fastqc_trim:
         zip = "results/QC/trimmed/fastqc/{sample}/{sample}_{seq_lane}_trimmed_fastqc.zip",
     conda:
         config["conda_envs"]["qc"]
-    threads: 2
+    threads: get_resource("fastqc", "threads")
+    resources:
+        mem_mb = get_resource("fastqc", "mem_mb"),
+        runtime = get_resource("fastqc", "runtime")
     params: 
         outdir = lambda wildcards, output: os.path.dirname(output.html)
     log:
@@ -96,7 +119,10 @@ rule fastq_screen_files:
         fastq_screen_png = "results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.png"
     conda:
         config["conda_envs"]["fastq_screen"]
-    threads: 1
+    threads: get_resource("fastq_screen", "threads")
+    resources:
+        mem_mb = get_resource("fastq_screen", "mem_mb"),
+        runtime = get_resource("fastq_screen", "runtime")
     params:
         fastq_screen_config = config["fastq_screen_conf"],
         aligner = config["fastq_screen_aling"],
@@ -122,6 +148,10 @@ rule merged_fastq:
         fastq_merged = "results/merged/{sample}.fastq.gz"
     conda: 
         config["conda_envs"]["qc"]
+    threads: get_resource("default", "threads")
+    resources:
+        mem_mb = get_resource("default", "mem_mb"),
+        runtime = get_resource("default", "runtime")
     log:
         "log/merged/{sample}_merging.log"
     shell:
@@ -135,7 +165,10 @@ rule fastqc_merged:
         zip = "results/QC/merged/{sample}/{sample}_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
-    threads: 2
+    threads: get_resource("fastqc", "threads")
+    resources:
+        mem_mb = get_resource("fastqc", "mem_mb"),
+        runtime = get_resource("fastqc", "runtime")
     params: 
         outdir = lambda wildcards, output: os.path.dirname(output.html)
     log:
@@ -153,7 +186,10 @@ rule fastq_screen_merged:
         fastq_screen_png = "results/fastq_screen/merged/{sample}_screen.png"
     conda:
         config["conda_envs"]["fastq_screen"]
-    threads: 2
+    threads: get_resource("fastq_screen", "threads")
+    resources:
+        mem_mb = get_resource("fastq_screen", "mem_mb"),
+        runtime = get_resource("fastq_screen", "runtime")
     params:
         fastq_screen_config = config["fastq_screen_conf"],
         aligner = config["fastq_screen_aling"],
@@ -168,7 +204,6 @@ rule fastq_screen_merged:
             --threads {threads} 2> {log}
     """
 
-
 rule alignment:
     input: 
         fastq_merged = "results/merged/{sample}.fastq.gz"
@@ -176,7 +211,10 @@ rule alignment:
         bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     conda:
         config["conda_envs"]["aligners"]
-    threads: 4
+    threads: get_resource("alignment", "threads")
+    resources:
+        mem_mb = get_resource("alignment", "mem_mb"),
+        runtime = get_resource("alignment", "runtime")
     params:
         genome_index = config["genome_index"],
         outdir = lambda wildcards, output: os.path.dirname(output.bam)
@@ -200,7 +238,10 @@ rule bam_indexing:
         bam_bai = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam.bai"
     conda:
         config["conda_envs"]["aligners"]
-    threads: 3
+    threads: get_resource("bam_indexing", "threads")
+    resources:
+        mem_mb = get_resource("bam_indexing", "mem_mb"),
+        runtime = get_resource("bam_indexing", "runtime")
     log:
         "log/bam_indexing/{sample}.log"
     shell:
@@ -214,7 +255,10 @@ rule fastqc_alignment:
         zip = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.zip",
     conda:
         config["conda_envs"]["qc"]
-    threads: 5
+    threads: get_resource("fastqc", "threads")
+    resources:
+        mem_mb = get_resource("fastqc", "mem_mb"),
+        runtime = get_resource("fastqc", "runtime")
     params: 
         outdir = lambda wildcards, output : os.path.dirname(output.html)
     log:
@@ -231,12 +275,15 @@ rule qualimap_bamqc:
         genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt"
     conda:
         config["conda_envs"]["qualimap"]
-    threads: 3
+    threads: get_resource("qualimap", "threads")
+    resources:
+        mem_mb = get_resource("qualimap", "mem_mb"),
+        runtime = get_resource("qualimap", "runtime")
     params:
         qmap_genome = config["qualimap"]["genome"],
         annotation = config["annotation"],
         outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
-        mem = config["qualimap"]["mem"]
+        mem = f"{get_resource('qualimap_bamqc', 'mem_mb') // 1024}G"
     log: 
         "log/QC/alignment/qualimap/bamqc/{sample}_qualimap_bamqc.log"
     benchmark:
@@ -254,7 +301,10 @@ rule qualimap_multi_bamqc:
         qmap_report = "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html"
     conda:
         config["conda_envs"]["qualimap"]
-    threads: 3
+    threads: get_resource("qualimap", "threads")
+    resources:
+        mem_mb = get_resource("qualimap", "mem_mb"),
+        runtime = get_resource("qualimap", "runtime")
     params: 
         qmap_input = "metadata/qualimap_multi_bamqc_input.txt",
         outdir = lambda wildcards, output: os.path.dirname(output.qmap_report)
@@ -274,10 +324,14 @@ rule qualimap_rnaseq:
         qmap_res = "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
     conda:
         config["conda_envs"]["qualimap"]
+    threads: get_resource("qualimap", "threads")
+    resources:
+        mem_mb = get_resource("qualimap", "mem_mb"),
+        runtime = get_resource("qualimap", "runtime")
     params:
         annotation = config["annotation"],
         outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
-        mem = config["qualimap"]["mem"]
+        mem = f"{get_resource('qualimap_bamqc', 'mem_mb') // 1024}G"
     log:
         "log/QC/alignment/qualimap/rnaseq/{sample}_qualiamp_rnaseq.log"
     benchmark:
@@ -295,6 +349,10 @@ rule rseqc_strand:
         rseqc_out = "results/QC/alignment/rseqc/{sample}_strandiness.txt"
     conda: 
         config["conda_envs"]["rseqc"]
+    threads: get_resource("rseqc_strand", "threads")
+    resources:
+        mem_mb = get_resource("rseqc_strand", "mem_mb"),
+        runtime = get_resource("rseqc_strand", "runtime")
     params:
         bed_file = config["reference_bed"]
     log:
@@ -310,6 +368,10 @@ rule samtools_stats_flagstat:
         samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat"
     conda:
         config["conda_envs"]["aligners"]
+    threads: get_resource("default", "threads")
+    resources:
+        mem_mb = get_resource("default", "mem_mb"),
+        runtime = get_resource("default", "runtime")
     log:
         log_stats = "log/QC/alignment/samtools/{sample}_samtools_stats.log",
         log_flagstat = "log/QC/alignment/samtools/{sample}_samtools_flagstat.log"
@@ -325,6 +387,10 @@ rule feature_counts:
         feature_table = "results/feature_counts/counts.tsv" 
     conda: 
         config["conda_envs"]["quantification"]
+    threads: get_resource("feature_counts", "threads")
+    resources:
+        mem_mb = get_resource("feature_counts", "mem_mb"),
+        runtime = get_resource("feature_counts", "runtime")
     params:
         annotations = config["annotation"]
     log:
@@ -333,7 +399,7 @@ rule feature_counts:
         "benchmarks/subread_featureCounts.bmk"
     shell:"""
         featureCounts -a {params.annotations} -O -F GTF -t gene -g gene_id \
-            --extraAttributes gene_name,transcript_name -s 1 -T 15 \
+            --extraAttributes gene_name,transcript_name -s 1 -T {threads} \
             -o {output.feature_table} {input.bam} 2> {log}
     """
 
@@ -344,6 +410,10 @@ rule multiqc_raw:
         multiqc = "results/QC/MultiQC/raw/multiqc_report.html"
     conda: 
         config["conda_envs"]["qc"]
+    threads: get_resource("default", "threads")
+    resources:
+        mem_mb = get_resource("default", "mem_mb"),
+        runtime = get_resource("default", "runtime")
     params: 
         inputdir = "results/QC/raw",
         outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
@@ -361,6 +431,10 @@ rule multiqc_trimmed:
         multiqc = "results/QC/MultiQC/trimmed/multiqc_report.html"
     conda: 
         config["conda_envs"]["qc"]
+    threads: get_resource("default", "threads")
+    resources:
+        mem_mb = get_resource("default", "mem_mb"),
+        runtime = get_resource("default", "runtime")
     params:
         inputdir = ["results/QC/trimmed", "results/trimmed", "log/bbduk"],
         outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
@@ -386,6 +460,10 @@ rule multiqc_merge:
         multiqc = "results/QC/MultiQC/merged/multiqc_report.html"
     conda: 
         config["conda_envs"]["qc"]
+    threads: get_resource("default", "threads")
+    resources:
+        mem_mb = get_resource("default", "mem_mb"),
+        runtime = get_resource("default", "runtime")
     params: 
         outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     log:
@@ -404,7 +482,10 @@ if UMIs:
             "results/umi_extract/{sample}_{seq_lane}.fastq.gz"
         conda:
             config["conda_envs"]["umi_tools"]
-        threads: 3
+        threads: get_resource("umi_extract", "threads")
+        resources:
+            mem_mb = get_resource("umi_extract", "mem_mb"),
+            runtime = get_resource("umi_extract", "walltime")
         params:
             pattern = lambda wildcards: config["umi_processing"]["pattern"]
         log:
@@ -425,7 +506,10 @@ if UMIs:
             dedup = "results/alignment/dedup/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
         conda:
             config["conda_envs"]["umi_tools"]
-        threads: 3
+        threads: get_resource("umi_dedup", "threads")
+        resources:
+            mem_mb = get_resource("umi_dedup", "mem_mb"),
+            runtime = get_resource("umi_dedup", "runtime")
         params:
             stats = "results/dedup/alignments/{sample}"
         log:
