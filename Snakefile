@@ -97,8 +97,6 @@ rule fastq_screen_files:
     conda:
         config["conda_envs"]["fastq_screen"]
     threads: 1
-    resources:
-         mem_mb=28728
     params:
         fastq_screen_config = config["fastq_screen_conf"],
         aligner = config["fastq_screen_aling"],
@@ -151,17 +149,15 @@ rule fastq_screen_merged:
     input: 
         fastq_merged = expand("results/merged/{sample}.fastq.gz", sample = config["sample"])
     output: 
-        fastq_screen_txt = "results/fastq_screen/merged/{sample}_fastq_screen.txt",
-        fastq_screen_png = "results/fastq_screen/merged/{sample}_fastq_screen.png"
+        fastq_screen_txt = "results/fastq_screen/merged/{sample}_screen.txt",
+        fastq_screen_png = "results/fastq_screen/merged/{sample}_screen.png"
     conda:
         config["conda_envs"]["fastq_screen"]
-    threads: 1
-    resources:
-        mem_mb=28728
+    threads: 2
     params:
         fastq_screen_config = config["fastq_screen_conf"],
         aligner = config["fastq_screen_aling"],
-        outdir = "results/QC/fastq_screen/"
+        outdir = "results/QC/fastq_screen/merged"
     log:
         log = "log/QC/fastq_screen/{sample}_fastq_screen.log"
     benchmark:
@@ -169,7 +165,7 @@ rule fastq_screen_merged:
     shell:"""
         fastq_screen {input.fastq_merged} --aligner {params.aligner} \
             --conf {params.fastq_screen_config} --outdir {params.outdir} \
-            -threads {threads} 2> {log}
+            --threads {threads} 2> {log}
     """
 
 
@@ -180,9 +176,7 @@ rule alignment:
         bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
     conda:
         config["conda_envs"]["aligners"]
-    threads: 5
-    resources:
-        mem_mb=26432
+    threads: 4
     params:
         genome_index = config["genome_index"],
         outdir = lambda wildcards, output: os.path.dirname(output.bam)
@@ -238,8 +232,6 @@ rule qualimap_bamqc:
     conda:
         config["conda_envs"]["qualimap"]
     threads: 3
-    resources:
-        mem_mb=26624
     params:
         qmap_genome = config["qualimap"]["genome"],
         annotation = config["annotation"],
@@ -263,8 +255,6 @@ rule qualimap_multi_bamqc:
     conda:
         config["conda_envs"]["qualimap"]
     threads: 3
-    resources:
-        mem_mb=26624
     params: 
         qmap_input = "metadata/qualimap_multi_bamqc_input.txt",
         outdir = lambda wildcards, output: os.path.dirname(output.qmap_report)
@@ -415,8 +405,6 @@ if UMIs:
         conda:
             config["conda_envs"]["umi_tools"]
         threads: 3
-        resources:
-            mem_mb=15000
         params:
             pattern = lambda wildcards: config["umi_processing"]["pattern"]
         log:
@@ -438,8 +426,6 @@ if UMIs:
         conda:
             config["conda_envs"]["umi_tools"]
         threads: 3
-        resources:
-            mem_mb=10000
         params:
             stats = "results/dedup/alignments/{sample}"
         log:
