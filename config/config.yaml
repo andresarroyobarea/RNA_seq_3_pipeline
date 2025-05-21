@@ -72,12 +72,12 @@ resources:
   
   bam_indexing:
     threads: 8
-    mem_mb:  4096
+    mem_mb: 4096
     runtime: 10
   
   qualimap:
     threads: 8
-    mem_mb:  16384
+    mem_mb: 16384
     runtime: 10
   
   rseqc_strand:
@@ -87,7 +87,7 @@ resources:
   
   feature_counts:
     threads: 8
-    mem_mb:  64000
+    mem_mb: 64000
     runtime: 120
   
   umi_extract:

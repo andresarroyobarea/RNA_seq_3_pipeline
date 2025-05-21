@@ -283,7 +283,7 @@ rule qualimap_bamqc:
         qmap_genome = config["qualimap"]["genome"],
         annotation = config["annotation"],
         outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
-        mem = f"{get_resource('qualimap_bamqc', 'mem_mb') // 1024}G"
+        mem = f"{get_resource('qualimap', 'mem_mb') // 1024}G"
     log: 
         "log/QC/alignment/qualimap/bamqc/{sample}_qualimap_bamqc.log"
     benchmark:
@@ -331,7 +331,7 @@ rule qualimap_rnaseq:
     params:
         annotation = config["annotation"],
         outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
-        mem = f"{get_resource('qualimap_bamqc', 'mem_mb') // 1024}G"
+        mem = f"{get_resource('qualimap', 'mem_mb') // 1024}G"
     log:
         "log/QC/alignment/qualimap/rnaseq/{sample}_qualiamp_rnaseq.log"
     benchmark:
