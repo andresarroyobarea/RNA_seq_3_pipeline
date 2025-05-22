@@ -161,8 +161,8 @@ rule fastqc_merged:
     input: 
         fastq = "results/merged/{sample}.fastq.gz"
     output:
-        html = "results/QC/merged/{sample}/{sample}_fastqc.html",
-        zip = "results/QC/merged/{sample}/{sample}_fastqc.zip"
+        html = "results/QC/merged/FastQC/{sample}/{sample}_fastqc.html",
+        zip = "results/QC/merged/FastQC/{sample}/{sample}_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
     threads: get_resource("fastqc", "threads")
@@ -180,10 +180,11 @@ rule fastqc_merged:
 
 rule fastq_screen_merged:
     input: 
-        fastq_merged = expand("results/merged/{sample}.fastq.gz", sample = config["sample"])
+        fastq_merged = "results/merged/{sample}.fastq.gz"
     output: 
-        fastq_screen_txt = "results/fastq_screen/merged/{sample}_screen.txt",
-        fastq_screen_png = "results/fastq_screen/merged/{sample}_screen.png"
+        fastq_screen_txt = "results/QC/merged/fastq_screen/{sample}/{sample}_screen.txt",
+        fastq_screen_png = "results/QC/merged/fastq_screen/{sample}/{sample}_screen.png",
+        fastq_screen_html = "results/QC/merged/fastq_screen/{sample}/{sample}_screen.html"
     conda:
         config["conda_envs"]["fastq_screen"]
     threads: get_resource("fastq_screen", "threads")
@@ -193,7 +194,7 @@ rule fastq_screen_merged:
     params:
         fastq_screen_config = config["fastq_screen_conf"],
         aligner = config["fastq_screen_aling"],
-        outdir = "results/QC/fastq_screen/merged"
+        outdir = lambda wildcards, output: os.path.dirname(output.fastq_screen_txt)
     log:
         log = "log/QC/fastq_screen/{sample}_fastq_screen.log"
     benchmark:
@@ -249,10 +250,10 @@ rule bam_indexing:
 
 rule fastqc_alignment:
     input:
-        bam = aligned_reads
+        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
     output:
-        html = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html",
-        zip = "results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.zip",
+        html = "results/QC/alignment/FastQC/{sample}/Aligned.sortedByCoord.out_fastqc.html",
+        zip = "results/QC/alignment/FastQC/{sample}/Aligned.sortedByCoord.out_fastqc.zip",
     conda:
         config["conda_envs"]["qc"]
     threads: get_resource("fastqc", "threads")
@@ -269,7 +270,7 @@ rule fastqc_alignment:
 
 rule qualimap_bamqc:
     input:
-        bam = aligned_reads
+        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
     output:
         qmap_report = "results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html",
         genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt"
@@ -318,7 +319,7 @@ rule qualimap_multi_bamqc:
 
 rule qualimap_rnaseq:
     input:  
-        bam = aligned_reads
+        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
     output: 
         qmap_report = "results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html",
         qmap_res = "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
@@ -344,7 +345,7 @@ rule qualimap_rnaseq:
 
 rule rseqc_strand:
     input: 
-        bam = aligned_reads
+        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
     output: 
         rseqc_out = "results/QC/alignment/rseqc/{sample}_strandiness.txt"
     conda: 
@@ -362,10 +363,10 @@ rule rseqc_strand:
 
 rule samtools_stats_flagstat:
     input:
-        bam = aligned_reads
+        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
     output:
-        samtools_stats = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats",
-        samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat"
+        samtools_stats = "results/QC/alignment/samtools_stats/{sample}/Aligned.sortedByCoord.out.bam.stats",
+        samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}/Aligned.sortedByCoord.out.bam.flagstat"
     conda:
         config["conda_envs"]["aligners"]
     threads: get_resource("default", "threads")
@@ -445,16 +446,16 @@ rule multiqc_trimmed:
 
 rule multiqc_merge:
     input:
-        seq_QC_merged = expand("results/QC/merged/{sample}/{sample}_fastqc.html", sample = config["sample"]),
-        fastq_screen_merged_txt = expand("results/fastq_screen/merged/{sample}/{sample}_fastq_screen.txt", sample = config["sample"]),
-        fastq_screen_merged_png = expand("results/fastq_screen/merged/{sample}/{sample}_fastq_screen.png", sample = config["sample"]),
-        bam_QC = expand("results/QC/alignment/FastQC/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
+        seq_QC_merged = expand("results/QC/merged/FastQC/{sample}/{sample}_fastqc.html", sample = config["sample"]),
+        fastq_screen_merged_txt = expand("results/QC/merged/fastq_screen/{sample}/{sample}_screen.txt", sample = config["sample"]),
+        fastq_screen_merged_png = expand("results/QC/merged/fastq_screen/{sample}/{sample}_screen.png", sample = config["sample"]),
+        bam_QC = expand("results/QC/alignment/FastQC/{sample}/Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
         qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"]),
         qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt", sample = config["sample"]),
         qmap_rnaseq_html = expand("results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html", sample = config["sample"]),
         qmap_rnaseq_txt = expand("results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt", sample = config["sample"]),
-        samtools_stats = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats", sample = config["sample"]),
-        samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"]),
+        samtools_stats = expand("results/QC/alignment/samtools_stats/{sample}/Aligned.sortedByCoord.out.bam.stats", sample = config["sample"]),
+        samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}/Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"]),
         rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_strandiness.txt", sample = config["sample"])
     output:
         multiqc = "results/QC/MultiQC/merged/multiqc_report.html"
@@ -511,12 +512,12 @@ if UMIs:
             mem_mb = get_resource("umi_dedup", "mem_mb"),
             runtime = get_resource("umi_dedup", "runtime")
         params:
-            stats_dir = lambda wildcards, output : os.path.dirname(output.dedup)
+            stats_dir = lambda wildcards: f"results/alignment/dedup/{wildcards.sample}/stats"
         log:
             "log/dedup/{sample}.log"
         benchmark:
             "benchmarks/{sample}_umi_tools_dedup.bmk"
         shell:"""
-            umi_tools dedup -I {input.bam} --log={log} -S {output.dedup} --output-stats={params.stats} \
+            umi_tools dedup -I {input.bam} --log={log} -S {output.dedup} --output-stats={params.stats_dir} \
                 --method=unique --multimapping-detection-method=NH
         """
