@@ -208,7 +208,7 @@ rule alignment:
     input: 
         fastq_merged = "results/merged/{sample}.fastq.gz"
     output: 
-        bam = "results/alignment/{sample}/{sample}_Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}/{sample}Aligned.sortedByCoord.out.bam"
     conda:
         config["conda_envs"]["aligners"]
     threads: get_resource("alignment", "threads")
@@ -226,7 +226,7 @@ rule alignment:
         STAR --runThreadN {threads} --genomeDir {params.genome_index} --genomeLoad LoadAndKeep --readFilesIn {input.fastq_merged} \
             --readFilesCommand gunzip -c --outFilterType BySJout --outFilterMultimapNmax 25 --alignSJoverhangMin 8 \
             --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverLmax 0.3 \
-            --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --limitBAMsortRAM 12000000000 \
+            --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --limitBAMsortRAM 64000000000 \
             --outSAMattributes NH HI AS NM MD --outSAMtype BAM SortedByCoordinate \
             --outFileNamePrefix {params.outdir} 2> {log}
     """
