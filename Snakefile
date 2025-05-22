@@ -511,7 +511,7 @@ if UMIs:
             mem_mb = get_resource("umi_dedup", "mem_mb"),
             runtime = get_resource("umi_dedup", "runtime")
         params:
-            stats = "results/dedup/alignments/{sample}"
+            stats_dir = lambda wildcards, output : os.path.dirname(output.dedup)
         log:
             "log/dedup/{sample}.log"
         benchmark:
