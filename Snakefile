@@ -217,7 +217,7 @@ rule alignment:
         runtime = get_resource("alignment", "runtime")
     params:
         genome_index = config["genome_index"],
-        outdir = lambda wildcards, output: os.path.dirname(output.bam)
+        outdir = lambda wildcards, output: os.path.join(os.path.dirname(output.bam), '')
     log:
         "log/alignment/{sample}_alignment.log"
     benchmark:
