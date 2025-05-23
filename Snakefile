@@ -26,9 +26,9 @@ else:
 
 ## Let stablish the path for BAM files in each case
 if UMIs:
-    aligned_reads = "results/alignment/dedup/{sample}/Aligned.sortedByCoord.out.bam"
+    aligned_reads = "results/alignment/dedup/{sample}_Aligned.sortedByCoord.out.bam"
 else:
-    aligned_reads = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
+    aligned_reads = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
 
 rule all:
     input:
@@ -209,7 +209,7 @@ rule alignment:
     input: 
         fastq_merged = "results/merged/{sample}.fastq.gz"
     output: 
-        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     conda:
         config["conda_envs"]["aligners"]
     threads: get_resource("alignment", "threads")
@@ -218,7 +218,8 @@ rule alignment:
         runtime = get_resource("alignment", "runtime")
     params:
         genome_index = config["genome_index"],
-        outdir = lambda wildcards, output: os.path.join(os.path.dirname(output.bam), '')
+        outdir = lambda wildcards: os.path.join("results", "alignment", f"{wildcards.sample}_")
+        #outdir = "results/alignment/{sample}_"
     log:
         "log/alignment/{sample}_alignment.log"
     benchmark:
@@ -234,9 +235,9 @@ rule alignment:
 
 rule bam_indexing:
     input:
-        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     output:
-        bam_bai = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam.bai"
+        bam_bai = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam.bai"
     conda:
         config["conda_envs"]["aligners"]
     threads: get_resource("bam_indexing", "threads")
@@ -250,10 +251,10 @@ rule bam_indexing:
 
 rule fastqc_alignment:
     input:
-        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     output:
-        html = "results/QC/alignment/FastQC/{sample}/Aligned.sortedByCoord.out_fastqc.html",
-        zip = "results/QC/alignment/FastQC/{sample}/Aligned.sortedByCoord.out_fastqc.zip",
+        html = "results/QC/alignment/FastQC/{sample}/{sample}_Aligned.sortedByCoord.out_fastqc.html",
+        zip = "results/QC/alignment/FastQC/{sample}/{sample}_Aligned.sortedByCoord.out_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
     threads: get_resource("fastqc", "threads")
@@ -270,7 +271,7 @@ rule fastqc_alignment:
 
 rule qualimap_bamqc:
     input:
-        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     output:
         qmap_report = "results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html",
         genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt"
@@ -319,7 +320,7 @@ rule qualimap_multi_bamqc:
 
 rule qualimap_rnaseq:
     input:  
-        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     output: 
         qmap_report = "results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html",
         qmap_res = "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
@@ -345,7 +346,7 @@ rule qualimap_rnaseq:
 
 rule rseqc_strand:
     input: 
-        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     output: 
         rseqc_out = "results/QC/alignment/rseqc/{sample}_strandiness.txt"
     conda: 
@@ -363,10 +364,10 @@ rule rseqc_strand:
 
 rule samtools_stats_flagstat:
     input:
-        bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam"
+        bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     output:
-        samtools_stats = "results/QC/alignment/samtools_stats/{sample}/Aligned.sortedByCoord.out.bam.stats",
-        samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}/Aligned.sortedByCoord.out.bam.flagstat"
+        samtools_stats = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats",
+        samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat"
     conda:
         config["conda_envs"]["aligners"]
     threads: get_resource("default", "threads")
@@ -449,13 +450,16 @@ rule multiqc_merge:
         seq_QC_merged = expand("results/QC/merged/FastQC/{sample}/{sample}_fastqc.html", sample = config["sample"]),
         fastq_screen_merged_txt = expand("results/QC/merged/fastq_screen/{sample}/{sample}_screen.txt", sample = config["sample"]),
         fastq_screen_merged_png = expand("results/QC/merged/fastq_screen/{sample}/{sample}_screen.png", sample = config["sample"]),
-        bam_QC = expand("results/QC/alignment/FastQC/{sample}/Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
+        bam_QC = expand("results/QC/alignment/FastQC/{sample}/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
+        umi_extract = expand("log/umitools/extract/{sample}_{seq_lane}.log", sample = config["sample"], seq_lane = config["seq_lane"]),
+        umi_dedup = expand("log/umitools/dedup/{sample}.log", sample = config["sample"]),
         qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"]),
         qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt", sample = config["sample"]),
         qmap_rnaseq_html = expand("results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html", sample = config["sample"]),
         qmap_rnaseq_txt = expand("results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt", sample = config["sample"]),
-        samtools_stats = expand("results/QC/alignment/samtools_stats/{sample}/Aligned.sortedByCoord.out.bam.stats", sample = config["sample"]),
-        samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}/Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"]),
+        qmap_multi = "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html", 
+        samtools_stats = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats", sample = config["sample"]),
+        samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"]),
         rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_strandiness.txt", sample = config["sample"])
     output:
         multiqc = "results/QC/MultiQC/merged/multiqc_report.html"
@@ -490,7 +494,7 @@ if UMIs:
         params:
             pattern = lambda wildcards: config["umi_processing"]["pattern"]
         log:
-            "log/umi_extract/{sample}_{seq_lane}.log"
+            "log/umitools/extract/{sample}_{seq_lane}.log"
         benchmark:
             "benchmarks/{sample}_{seq_lane}_umi_tools_extract.bmk"
         shell: """
@@ -501,10 +505,11 @@ if UMIs:
 
     rule umi_dedup:
         input:
-            bam = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam",
-            bam_bai = "results/alignment/{sample}/Aligned.sortedByCoord.out.bam.bai"
+            bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam",
+            bam_bai = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam.bai"
         output:
-            dedup = "results/alignment/dedup/{sample}/Aligned.sortedByCoord.out.bam"
+            dedup = "results/alignment/dedup/{sample}_Aligned.sortedByCoord.out.bam",
+            stat = "results/alignment/dedup/{sample}_per_umi.tsv"
         conda:
             config["conda_envs"]["umi_tools"]
         threads: get_resource("umi_dedup", "threads")
@@ -512,11 +517,11 @@ if UMIs:
             mem_mb = get_resource("umi_dedup", "mem_mb"),
             runtime = get_resource("umi_dedup", "runtime")
         params:
-            stats_dir = lambda wildcards: f"results/alignment/dedup/{wildcards.sample}/stats"
+            stats_dir = lambda wildcards: f"results/alignment/dedup/{wildcards.sample}"
         log:
-            "log/dedup/{sample}.log"
+            "log/umitools/dedup/{sample}.log"
         benchmark:
-            "benchmarks/{sample}_umi_tools_dedup.bmk"
+            "benchmarks/{sample}_umi_dedup.bmk"
         shell:"""
             umi_tools dedup -I {input.bam} --log={log} -S {output.dedup} --output-stats={params.stats_dir} \
                 --method=unique --multimapping-detection-method=NH
