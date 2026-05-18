@@ -6,18 +6,25 @@ rule fastqc_raw:
         zip = "results/QC/raw/{sample}/{sample}_{seq_lane}_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
-    threads: get_resource(config, "fastqc", "threads")
+    threads: 
+        get_resource(config, "fastqc", "threads")
     resources:
         mem_mb = get_resource(config, "fastqc", "mem_mb"),
         runtime = get_resource(config, "fastqc", "runtime")
     params: 
-        outdir = lambda wildcards, output: os.path.dirname(output.html)
+        outdir = lambda wildcards, output: os.path.dirname(output.html),
+        extra = config["parameters"]["fastqc"]["extra"]
     log:
-        fastqc = "log/QC/raw/{sample}_{seq_lane}_fastqc.log"
-    shell:
-        "mkdir -p {params.outdir} &&"
-        "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
-
+        "log/QC/raw/fastqc/{sample}_{seq_lane}.log"
+    benchmark:
+        "benchmarks/QC/raw/fastqc/{sample}_{seq_lane}.bmk"
+    shell: """
+        mkdir -p {params.outdir} &&
+        fastqc --outdir {params.outdir} \
+            --threads {threads} \
+            {input.fastq} \
+            {params.extra} 2> {log} 
+    """
 
 rule fastqc_trim:
     input: 
@@ -27,18 +34,25 @@ rule fastqc_trim:
         zip = "results/QC/trimmed/fastqc/{sample}/{sample}_{seq_lane}_trimmed_fastqc.zip",
     conda:
         config["conda_envs"]["qc"]
-    threads: get_resource(config, "fastqc", "threads")
+    threads: 
+        get_resource(config, "fastqc", "threads")
     resources:
         mem_mb = get_resource(config, "fastqc", "mem_mb"),
         runtime = get_resource(config, "fastqc", "runtime")
     params: 
-        outdir = lambda wildcards, output: os.path.dirname(output.html)
+        outdir = lambda wildcards, output: os.path.dirname(output.html),
+        extra = config["parameters"]["fastqc"]["extra"]
     log:
-        fastqc = "log/QC/trimmed/fastqc/{sample}_{seq_lane}_trimmed_fastqc.log"
-    shell:
-        "mkdir -p {params.outdir} &&"
-        "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
-
+        "log/QC/trimmed/fastqc/{sample}_{seq_lane}.log"
+    benchmark:
+        "benchmarks/QC/trimmed/fastqc/{sample}_{seq_lane}.bmk"
+    shell: """
+        mkdir -p {params.outdir} &&
+        fastqc --outdir {params.outdir} \
+            --threads {threads} \
+            {input.fastq} \
+            {params.extra} 2> {log} 
+    """
 
 
 rule fastq_screen_files:
@@ -75,18 +89,25 @@ rule fastqc_merged:
         zip = "results/QC/merged/FastQC/{sample}/{sample}_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
-    threads: get_resource(config, "fastqc", "threads")
+    threads: 
+        get_resource(config, "fastqc", "threads")
     resources:
         mem_mb = get_resource(config, "fastqc", "mem_mb"),
         runtime = get_resource(config, "fastqc", "runtime")
     params: 
-        outdir = lambda wildcards, output: os.path.dirname(output.html)
+        outdir =lambda wildcards, output: os.path.dirname(output.html),
+        extra = config["parameters"]["fastqc"]["extra"]
     log:
-        fastqc = "log/QC/raw/qc_per_lane/{sample}_fastqc.log"
-    shell:
-        "mkdir -p {params.outdir} &&"
-        "fastqc --outdir {params.outdir} --threads {threads} {input.fastq} 2> {log.fastqc} "
-
+        "log/QC/merged/fastqc/{sample}.log"
+    benchmark:
+        "benchmarks/QC/merged/fastqc/{sample}.bmk"
+    shell: """
+        mkdir -p {params.outdir} &&
+        fastqc --outdir {params.outdir} \
+            --threads {threads} \
+            {input.fastq} \
+            {params.extra} 2> {log} 
+    """
 
 rule fastq_screen_merged:
     input: 
