@@ -63,21 +63,25 @@ rule fastq_screen_files:
         fastq_screen_png = "results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.png"
     conda:
         config["conda_envs"]["fastq_screen"]
-    threads: get_resource(config, "fastq_screen", "threads")
+    threads: 
+        get_resource(config, "fastq_screen", "threads")
     resources:
         mem_mb = get_resource(config, "fastq_screen", "mem_mb"),
         runtime = get_resource(config, "fastq_screen", "runtime")
-    params:
-        fastq_screen_config = config["fastq_screen_conf"],
-        aligner = config["fastq_screen_aling"],
-        outdir = lambda wildcards, output: os.path.dirname(output.fastq_screen_txt)
+    params: # TODO: Config as input
+        fscreen_config = config["parameters"]["fastq_screen"]["config"],
+        aligner = config["parameters"]["fastq_screen"]["aligner"],
+        outdir = lambda wildcards, output: os.path.dirname(output.fastq_screen_txt),
+        extra = config["parameters"]["fastq_screen"]["extra"]
     log:
-        log = "log/QC/trimmed/fastq_screen/{sample}_{seq_lane}_trimmed_screen.log"
+        "log/QC/trimmed/fastq_screen/{sample}_{seq_lane}.log"
     benchmark:
-        "benchmarks/{sample}_{seq_lane}_trimmed_screen.bmk"
+        "benchmarks/QC/trimmed/fastq_screen/{sample}_{seq_lane}.bmk"
     shell:"""
-        fastq_screen {input.fastq} --aligner {params.aligner} \
-            --conf {params.fastq_screen_config} --outdir {params.outdir} \
+        fastq_screen {input.fastq} \
+            --aligner {params.aligner} \
+            --conf {params.fscreen_config} \
+            --outdir {params.outdir} \
             -threads {threads} 2> {log}
     """
 
@@ -115,25 +119,29 @@ rule fastq_screen_merged:
     output: 
         fastq_screen_txt = "results/QC/merged/fastq_screen/{sample}/{sample}_screen.txt",
         fastq_screen_png = "results/QC/merged/fastq_screen/{sample}/{sample}_screen.png",
-        fastq_screen_html = "results/QC/merged/fastq_screen/{sample}/{sample}_screen.html"
+        #fastq_screen_html = "results/QC/merged/fastq_screen/{sample}/{sample}_screen.html"
     conda:
         config["conda_envs"]["fastq_screen"]
-    threads: get_resource(config, "fastq_screen", "threads")
+    threads: 
+        get_resource(config, "fastq_screen", "threads")
     resources:
         mem_mb = get_resource(config, "fastq_screen", "mem_mb"),
         runtime = get_resource(config, "fastq_screen", "runtime")
     params:
-        fastq_screen_config = config["fastq_screen_conf"],
-        aligner = config["fastq_screen_aling"],
-        outdir = lambda wildcards, output: os.path.dirname(output.fastq_screen_txt)
+        fscreen_config = config["parameters"]["fastq_screen"]["config"],
+        aligner = config["parameters"]["fastq_screen"]["aligner"],
+        outdir = lambda wildcards, output: os.path.dirname(output.fastq_screen_txt),
+        extra = config["parameters"]["fastq_screen"]["extra"]
     log:
-        log = "log/QC/fastq_screen/{sample}_fastq_screen.log"
+        "log/QC/merged/fastq_screen/{sample}.log"
     benchmark:
-        "benchmarks/{sample}_fastq_screen.bmk"
-    shell:"""
-        fastq_screen {input.fastq_merged} --aligner {params.aligner} \
-            --conf {params.fastq_screen_config} --outdir {params.outdir} \
-            --threads {threads} 2> {log}
+        "benchmarks/QC/merged/fastq_screen/{sample}.bmk"
+     shell:"""
+        fastq_screen {input.fastq} \
+            --aligner {params.aligner} \
+            --conf {params.fscreen_config} \
+            --outdir {params.outdir} \
+            -threads {threads} 2> {log}
     """
 
 
