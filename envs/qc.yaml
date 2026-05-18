@@ -1,8 +1,0 @@
-name: qc
-channels:
-    - conda-forge
-    - bioconda
-    - defaults
-dependencies:
-    - fastqc
-    - multiqc=1.28
