@@ -144,7 +144,6 @@ rule fastq_screen_merged:
             -threads {threads} 2> {log}
     """
 
-
 rule fastqc_alignment:
     input:
         bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
@@ -153,17 +152,25 @@ rule fastqc_alignment:
         zip = "results/QC/alignment/FastQC/{sample}/{sample}_Aligned.sortedByCoord.out_fastqc.zip"
     conda:
         config["conda_envs"]["qc"]
-    threads: get_resource(config, "fastqc", "threads")
+    threads: 
+        get_resource(config, "fastqc", "threads")
     resources:
         mem_mb = get_resource(config, "fastqc", "mem_mb"),
         runtime = get_resource(config, "fastqc", "runtime")
     params: 
-        outdir = lambda wildcards, output : os.path.dirname(output.html)
+        outdir = lambda wildcards, output : os.path.dirname(output.html),
+        extra = config["parameters"]["fastqc"]["extra"]
     log:
-        "log/QC/alignment/FastQC/{sample}_alignment_fastqc.log"
-    shell:
-        "mkdir -p {params.outdir} &&"
-        "fastqc --outdir {params.outdir} --threads {threads} {input.bam} 2> {log} "
+        "log/QC/alignment/fastqc/{sample}.log"
+    benchmark: 
+        "benchmarks/QC/alignment/fastqc/{sample}.bmk"
+    shell: """
+        mkdir -p {params.outdir} &&
+        fastqc --outdir {params.outdir} \
+            --threads {threads} \
+            {input.bam} \
+            {params.extra} 2> {log} 
+    """
 
 rule qualimap_bamqc:
     input:
