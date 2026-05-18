@@ -14,9 +14,9 @@ rule bbduk:
         mem_mb = get_resource(config, "bbduk", "mem_mb"),
         runtime = get_resource(config, "bbduk", "runtime")
     params:
-        adapters = config["adapters"],
-        polyA = config["polyA"],
-        extra = config["parameters"]["bbudk"]["extra"]
+        adapters = config["parameters"]["bbduk"]["adapters"],
+        polyA = config["parameters"]["bbduk"]["polyA"],
+        extra = config["parameters"]["bbduk"]["extra"]
     log:
         "log/bbduk/{sample}_{seq_lane}.log"
     benchmark:

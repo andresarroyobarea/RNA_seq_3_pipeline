@@ -16,9 +16,9 @@ if UMIs:
             extract_method = config["umi_extract"]["extract_method"],
             extra = config["umi_extract"]["extra"]
         log:
-            "log/umi_extract/{sample}_{seq_lane}.log"
+            "log/umitools/extract/{sample}_{seq_lane}.log"
         benchmark:
-            "benchmarks/umi_extract/{sample}_{seq_lane}.bmk"
+            "benchmarks/umitools/extract/{sample}_{seq_lane}.bmk"
         shell: """
             umi_tools extract \ 
                 --stdin={input} \
@@ -47,9 +47,9 @@ if UMIs:
             stats_dir = lambda wildcards: f"results/alignment/dedup/{wildcards.sample}"
             extra = config["umi_dedup"]["extra"]
         log:
-            "log/umi_dedup/{sample}.log"
+            "log/umitools/dedup/{sample}.log"
         benchmark:
-            "benchmarks/umi_dedup/{sample}.bmk"
+            "benchmarks/umitools/dedup/{sample}.bmk"
         shell:"""
             umi_tools dedup \
                 -I {input.bam} \

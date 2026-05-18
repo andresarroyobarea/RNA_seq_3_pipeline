@@ -208,7 +208,7 @@ rule qualimap_bamqc:
 
 rule qualimap_multi_bamqc:
     input:
-        expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"])
+        expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = samples)
     output:
         qmap_report = "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html"
     conda:
@@ -290,21 +290,24 @@ rule rseqc_strand:
             {params.extra} > {output.rseqc_out} 2> {log}
     """
 
-rule samtools_stats_flagstat:
+rule samtools_qc:
     input:
         bam = "results/alignment/{sample}_Aligned.sortedByCoord.out.bam"
     output:
-        samtools_stats = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats",
-        samtools_flagstat = "results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat"
+        samtools_stats = "results/QC/alignment/samtools_qc/{sample}_Aligned.sortedByCoord.out.bam.stats",
+        samtools_flagstat = "results/QC/alignment/samtools_qc/{sample}_Aligned.sortedByCoord.out.bam.flagstat"
     conda:
         config["conda_envs"]["aligners"]
-    threads: get_resource(config, "default", "threads")
+    threads: 
+        get_resource(config, "default", "threads")
     resources:
         mem_mb = get_resource(config, "default", "mem_mb"),
         runtime = get_resource(config, "default", "runtime")
+    params:
+        extra = config["parameters"]["samtools_qc"]["extra"]
     log:
-        log_stats = "log/QC/alignment/samtools/{sample}_samtools_stats.log",
-        log_flagstat = "log/QC/alignment/samtools/{sample}_samtools_flagstat.log"
+        log_stats = "log/QC/alignment/samtools_qc/{sample}.log",
+        log_flagstat = "log/QC/alignment/samtools_qc/{sample}.log"
     shell:"""
         samtools stats {input.bam} > {output.samtools_stats} 2> {log.log_stats} &&
         samtools flagstat {input.bam} > {output.samtools_flagstat} 2> {log.log_flagstat}
@@ -312,9 +315,9 @@ rule samtools_stats_flagstat:
 
 rule multiqc_trimmed:
     input: 
-        seqs_QC_trim = expand("results/QC/trimmed/fastqc/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html", sample = config["sample"], seq_lane = config["seq_lane"]),
-        fastq_screen_txt = expand("results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.txt", sample = config["sample"], seq_lane = config["seq_lane"]),
-        fastq_screen_png = expand("results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.png", sample = config["sample"], seq_lane = config["seq_lane"])
+        seqs_QC_trim = expand("results/QC/trimmed/fastqc/{sample}/{sample}_{seq_lane}_trimmed_fastqc.html", sample = samples, seq_lane = lanes),
+        fastq_screen_txt = expand("results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.txt", sample = samples, seq_lane = lanes),
+        fastq_screen_png = expand("results/QC/trimmed/fastq_screen/{sample}/{sample}_{seq_lane}_trimmed_screen.png", sample = samples, seq_lane = lanes)
     output:
         multiqc = "results/QC/MultiQC/trimmed/multiqc_report.html"
     conda: 
@@ -325,39 +328,48 @@ rule multiqc_trimmed:
         runtime = get_resource(config, "default", "runtime")
     params:
         inputdir = ["results/QC/trimmed", "results/trimmed", "log/bbduk"],
-        outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
+        outdir = lambda wildcards, output : os.path.dirname(output.multiqc),
+        extra = config["parameters"]["multiqc"]["extra"]
     log:
-        log = "log/QC/MultiQC/trimmed/multiqc_report.log",
-    shell: 
-        "multiqc {params.inputdir} -o {params.outdir} 2> {log.log} "
+        "log/QC/MultiQC/trimmed/multiqc_report.log",
+    shell: """
+        multiqc {params.inputdir} \
+            -o {params.outdir} \
+            {params.extra} 2> {log} 
+    """
 
 rule multiqc_merge:
     input:
-        seq_QC_merged = expand("results/QC/merged/FastQC/{sample}/{sample}_fastqc.html", sample = config["sample"]),
-        fastq_screen_merged_txt = expand("results/QC/merged/fastq_screen/{sample}/{sample}_screen.txt", sample = config["sample"]),
-        fastq_screen_merged_png = expand("results/QC/merged/fastq_screen/{sample}/{sample}_screen.png", sample = config["sample"]),
-        bam_QC = expand("results/QC/alignment/FastQC/{sample}/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = config["sample"]),
-        umi_extract = expand("log/umitools/extract/{sample}_{seq_lane}.log", sample = config["sample"], seq_lane = config["seq_lane"]),
-        umi_dedup = expand("log/umitools/dedup/{sample}.log", sample = config["sample"]),
-        qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = config["sample"]),
-        qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt", sample = config["sample"]),
-        qmap_rnaseq_html = expand("results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html", sample = config["sample"]),
-        qmap_rnaseq_txt = expand("results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt", sample = config["sample"]),
+        seq_QC_merged = expand("results/QC/merged/FastQC/{sample}/{sample}_fastqc.html", sample = samples),
+        fastq_screen_merged_txt = expand("results/QC/merged/fastq_screen/{sample}/{sample}_screen.txt", sample = samples),
+        fastq_screen_merged_png = expand("results/QC/merged/fastq_screen/{sample}/{sample}_screen.png", sample = samples),
+        bam_QC = expand("results/QC/alignment/FastQC/{sample}/{sample}_Aligned.sortedByCoord.out_fastqc.html", sample = samples),
+        umi_extract = expand("log/umitools/extract/{sample}_{seq_lane}.log", sample = samples, seq_lane = lanes),
+        umi_dedup = expand("log/umitools/dedup/{sample}.log", sample = samples),
+        qmap_bamqc_html = expand("results/QC/alignment/qualimap/bamqc/{sample}/qualimapReport.html", sample = samples),
+        qmap_bamqc_txt = expand("results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt", sample = samples),
+        qmap_rnaseq_html = expand("results/QC/alignment/qualimap/rnaseq/{sample}/qualimapReport.html", sample = samples),
+        qmap_rnaseq_txt = expand("results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt", sample = samples),
         qmap_multi = "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html", 
-        samtools_stats = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.stats", sample = config["sample"]),
-        samtools_flagstat = expand("results/QC/alignment/samtools_stats/{sample}_Aligned.sortedByCoord.out.bam.flagstat",  sample = config["sample"]),
-        rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_strandiness.txt", sample = config["sample"])
+        samtools_stats = expand("results/QC/alignment/samtools_qc/{sample}_Aligned.sortedByCoord.out.bam.stats", sample = samples),
+        samtools_flagstat = expand("results/QC/alignment/samtools_qc/{sample}_Aligned.sortedByCoord.out.bam.flagstat",  sample = samples),
+        rseqc_strandiness = expand("results/QC/alignment/rseqc/{sample}_strandiness.txt", sample = samples)
     output:
         multiqc = "results/QC/MultiQC/merged/multiqc_report.html"
     conda: 
         config["conda_envs"]["qc"]
-    threads: get_resource(config, "default", "threads")
+    threads: 
+        get_resource(config, "default", "threads")
     resources:
         mem_mb = get_resource(config, "default", "mem_mb"),
-        runtime = get_resource(config, "default", "runtime")
+        runtime = get_resource(config, "default", "runtime"),
+        extra = config["parameters"]["multiqc"]["extra"]
     params: 
         outdir = lambda wildcards, output : os.path.dirname(output.multiqc)
     log:
-        log = "log/QC/MultiQC/multiqc_report_global.log",
-    shell: 
-        "multiqc {input} -o {params.outdir} 2> {log.log} "
+        "log/QC/MultiQC/multiqc_report_global.log",
+    shell: """
+        multiqc {input} \ 
+            -o {params.outdir} \ 
+            {params.extra} 2> {log} 
+    """

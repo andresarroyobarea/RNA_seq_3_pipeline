@@ -10,7 +10,7 @@ rule alignment:
         mem_mb = get_resource(config, "alignment", "mem_mb"),
         runtime = get_resource(config, "alignment", "runtime")
     params:
-        genome_index = config["genome_index"],
+        genome_index = config["genome"]["index"],
         outdir = lambda wildcards: os.path.join("results", "alignment", f"{wildcards.sample}_")
         extra = config["parameters"]["alignment"]["extra"]
     log:
