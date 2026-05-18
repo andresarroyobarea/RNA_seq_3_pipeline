@@ -7,20 +7,25 @@ if UMIs:
             "results/umi_extract/{sample}_{seq_lane}.fastq.gz"
         conda:
             config["conda_envs"]["umi_tools"]
-        threads: get_resource(config, "umi_extract", "threads")
+        threads: 
+            get_resource(config, "umi_extract", "threads")
         resources:
             mem_mb = get_resource(config, "umi_extract", "mem_mb"),
             runtime = get_resource(config, "umi_extract", "walltime")
         params:
-            pattern = lambda wildcards: config["umi_processing"]["pattern"]
+            extract_method = config["umi_extract"]["extract_method"],
+            extra = config["umi_extract"]["extra"]
         log:
             "log/umitools/extract/{sample}_{seq_lane}.log"
         benchmark:
             "benchmarks/{sample}_{seq_lane}_umi_tools_extract.bmk"
         shell: """
-            umi_tools extract --stdin={input} \
-                --extract-method regex --bc-pattern="{params.pattern}" \
-                --log={log} --stdout={output}
+            umi_tools extract \ 
+                --stdin={input} \
+                --extract-method {params.extract_method} \
+                {params.extra} \
+                --log={log} \ 
+                --stdout={output}
         """
 
     rule umi_dedup:
