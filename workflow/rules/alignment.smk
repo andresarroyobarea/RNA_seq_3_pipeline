@@ -37,8 +37,9 @@ rule bam_indexing:
     threads: get_resource(config, "bam_indexing", "threads")
     resources:
         mem_mb = get_resource(config, "bam_indexing", "mem_mb"),
-        runtime = get_resource(config, "bam_indexing", "runtime")
+        runtime = get_resource(config, "bam_indexing", "runtime"),
+        extra = config["parameters"]["bam_indexing"]["extra"]
     log:
         "log/bam_indexing/{sample}.log"
     shell:
-        "samtools index -@ {threads} {input.bam} "
+        "samtools index -@ {threads} {input.bam} {params.extra} 2> {log}"
