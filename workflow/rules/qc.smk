@@ -180,22 +180,29 @@ rule qualimap_bamqc:
         genome_res = "results/QC/alignment/qualimap/bamqc/{sample}/genome_results.txt"
     conda:
         config["conda_envs"]["qualimap"]
-    threads: get_resource(config, "qualimap", "threads")
+    threads: 
+        get_resource(config, "qualimap", "threads")
     resources:
         mem_mb = get_resource(config, "qualimap", "mem_mb"),
         runtime = get_resource(config, "qualimap", "runtime")
     params:
-        qmap_genome = config["qualimap"]["genome"],
-        annotation = config["annotation"],
+        genome = config["qualimap"]["genome"],
+        annotation = config["genome"]["annotation_gtf"],
         outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
         mem = f"{get_resource(config, 'qualimap', 'mem_mb') // 1024}G"
+        extra_single = config["parameters"]["qualimap"]["extra"]
     log: 
-        "log/QC/alignment/qualimap/bamqc/{sample}_qualimap_bamqc.log"
+        "log/QC/alignment/qualimap/bamqc/{sample}.log"
     benchmark:
-        "benchmarks/{sample}_qualimap_bamqc.bmk"
+        "benchmarks/QC/alignment/qualimap/bamqc/{sample}.bmk"
     shell: """
-        qualimap bamqc -bam {input.bam} -gd {params.qmap_genome} -gff {params.annotation} \
-            -hm 3 -nr 1000 -nt {threads} --outdir {params.outdir} -p strand-specific-forward \
+        qualimap bamqc \
+            -bam {input.bam} \
+            -gd {params.genome} \ 
+            -gff {params.annotation} \
+            -nt {threads} \
+            --outdir {params.outdir} \
+            {params.extra_single} \
             --java-mem-size={params.mem} 2> {log}
     """
 
@@ -206,20 +213,25 @@ rule qualimap_multi_bamqc:
         qmap_report = "results/QC/alignment/qualimap/multi_bamqc/multisampleBamQcReport.html"
     conda:
         config["conda_envs"]["qualimap"]
-    threads: get_resource(config, "qualimap", "threads")
+    threads: 
+        get_resource(config, "qualimap", "threads")
     resources:
         mem_mb = get_resource(config, "qualimap", "mem_mb"),
         runtime = get_resource(config, "qualimap", "runtime")
     params: 
         qmap_input = "metadata/qualimap_multi_bamqc_input.txt",
-        outdir = lambda wildcards, output: os.path.dirname(output.qmap_report)
+        outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
+        extra_multi = config["parameters"]["qualimap"]["extra_multi"]
     log: 
         "log/QC/alignment/qualimap/mutli_bamqc/qualimap_multi_bamqc.log"
     benchmark:
-        "benchmarks/qualimap_multi_bamqc.bmk"
-    shell:
-        "qualimap multi-bamqc -d {params.qmap_input} --outdir {params.outdir} 2> {log} "
-
+        "benchmarks/QC/alignment/qualimap/multi_bamqc/qualimap_multi_bamqc.bmk"
+    shell:"""
+        qualimap multi-bamqc \
+            -d {params.qmap_input} \
+            --outdir {params.outdir} \
+            {params.extra_multi} 2> {log} 
+    """
 
 rule qualimap_rnaseq:
     input:  
@@ -229,22 +241,28 @@ rule qualimap_rnaseq:
         qmap_res = "results/QC/alignment/qualimap/rnaseq/{sample}/rnaseq_qc_results.txt"
     conda:
         config["conda_envs"]["qualimap"]
-    threads: get_resource(config, "qualimap", "threads")
+    threads: 
+        get_resource(config, "qualimap", "threads")
     resources:
         mem_mb = get_resource(config, "qualimap", "mem_mb"),
         runtime = get_resource(config, "qualimap", "runtime")
     params:
-        annotation = config["annotation"],
+        annotation = config["genome"]["annotation_gtf"],
         outdir = lambda wildcards, output: os.path.dirname(output.qmap_report),
-        mem = f"{get_resource(config, 'qualimap', 'mem_mb') // 1024}G"
+        mem = f"{get_resource(config, 'qualimap', 'mem_mb') // 1024}G",
+        extra_rnaseq = config["parameters"]["qualimap"]["extra_rnaseq"]
     log:
-        "log/QC/alignment/qualimap/rnaseq/{sample}_qualiamp_rnaseq.log"
+        "log/QC/alignment/qualimap/rnaseq/{sample}.log"
     benchmark:
-        "benchmarks/{sample}_qualimap_rnaseq.bmk"
+        "benchmarks/QC/alignment/qualimap/rnaseq/{sample}.bmk"
     shell:"""
-        qualimap rnaseq -bam {input.bam} -gtf {params.annotation} \
-            -outdir {params.outdir} -p strand-specific-forward \
-            --java-mem-size={params.mem} 2> {log}
+        qualimap rnaseq \
+            -bam {input.bam} \
+            -gtf {params.annotation} \
+            -outdir {params.outdir} \ 
+            --java-mem-size={params.mem} \
+            {params.extra_rnaseq} \
+            2> {log}
     """
 
 rule rseqc_strand:
