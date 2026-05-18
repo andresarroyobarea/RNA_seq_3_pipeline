@@ -18,11 +18,10 @@ rule bbduk:
         polyA = config["polyA"],
         extra = config["parameters"]["bbudk"]["extra"]
     log:
-        "log/bbduk/{sample}_{seq_lane}_bbduk.log"
+        "log/bbduk/{sample}_{seq_lane}.log"
     benchmark:
-        "benchmarks/bbduk/{sample}_{seq_lane}_bbduk.bmk"
-    shell:
-        """
+        "benchmarks/bbduk/{sample}_{seq_lane}.bmk"
+    shell:"""
         bbduk.sh in={input.sample} \
             out={output.trimmed} \
             outs={output.singleton} \
@@ -31,4 +30,4 @@ rule bbduk:
             ref={params.adapters},{params.polyA} \
             threads={threads} \
             {params.extra} > {log} 2>&1
-        """
+    """

@@ -43,5 +43,9 @@ rule bam_indexing:
         "log/bam_indexing/{sample}.log"
     benchmark:
         "benchmarks/bam_indexing/{sample}.bmk"
-    shell:
-        "samtools index -@ {threads} {input.bam} {params.extra} 2> {log}"
+    shell:"""
+        samtools index \
+            -@ {threads} \
+            {input.bam} \
+            {params.extra} 2> {log}
+    """
