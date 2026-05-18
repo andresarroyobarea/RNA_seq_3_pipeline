@@ -14,9 +14,9 @@ rule alignment:
         outdir = lambda wildcards: os.path.join("results", "alignment", f"{wildcards.sample}_")
         extra = config["parameters"]["alignment"]["extra"]
     log:
-        "log/alignment/{sample}_alignment.log"
+        "log/alignment/{sample}.log"
     benchmark:
-        "benchmarks/{sample}_alignment.bmk"
+        "benchmarks/alignment/{sample}.bmk"
     shell: """
         STAR --runThreadN {threads} \
             --genomeDir {params.genome_index} 
@@ -41,5 +41,7 @@ rule bam_indexing:
         extra = config["parameters"]["bam_indexing"]["extra"]
     log:
         "log/bam_indexing/{sample}.log"
+    benchmark:
+        "benchmarks/bam_indexing/{sample}.bmk"
     shell:
         "samtools index -@ {threads} {input.bam} {params.extra} 2> {log}"
