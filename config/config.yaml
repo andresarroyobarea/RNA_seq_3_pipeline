@@ -1,49 +1,89 @@
+# Units file
+
+# Envs
 conda_envs: 
-  qc: "envs/qc.yaml"
-  umi_tools: "envs/umi_tools.yaml"
-  preprocessing: "envs/preprocessing.yaml"
-  fastq_screen: "envs/fastq_screen.yaml"
-  aligners: "envs/aligners.yaml"
-  qualimap: "envs/qualimap.yaml"
-  rseqc: "envs/rseqc.yaml"
-  quantification: "envs/quantification.yaml"
+  qc: "workflow/envs/qc.yaml"
+  umi_tools: "workflow/envs/umi_tools.yaml"
+  preprocessing: "workflow/envs/preprocessing.yaml"
+  fastq_screen: "workflow/envs/fastq_screen.yaml"
+  aligners: "workflow/envs/aligners.yaml"
+  qualimap: "workflow/envs/qualimap.yaml"
+  rseqc: "workflow/envs/rseqc.yaml"
+  quantification: "workflow/envs/quantification.yaml"
 
-sample:
-  - MEC1-MYC-OE-S1
-  - MEC1-MYC-OE-S2
-  - MEC1-MYC-OE-S3
-  - MEC1-MYC-WT-S1
-  - MEC1-MYC-WT-S2
-  - MEC1-MYC-WT-S3
-  - PGA-MYC-OE-COMBO
-  - PGA-MYC-OE-S1
-  - PGA-MYC-OE-S2
-  - PGA-MYC-OE-S3
-  - PGA-MYC-WT-S1
-  - PGA-MYC-WT-S2
-  - PGA-MYC-WT-S3
-
+# Enable processes
 umi_processing: 
   enabled: True
-  pattern: '^(?P<umi_1>.{6})(?P<discard_1>.{4}).*' 
 
-seq_lane:
-  - L008
+# Genome information
+genome:
+  name: hg38
+  index: resources/genome/hg38_genome_index
+  annotation_gtf: resources/annotations/hg38/Homo_sapiens.GRCh38.111.gtf
+  annotation_bed: resources/annotations/hg38/Homo_sapiens.GRCh38.111.bed
 
-fastq_screen:
-  aligner: bowtie2
+# Parameters
+parameters:
 
-genome_index: resources/genome/hg38_genome_index
-annotation: resources/annotations/hg38/Homo_sapiens.GRCh38.111.gtf
-reference_bed: resources/annotations/hg38/Homo_sapiens.GRCh38.111.bed
-fastq_screen_conf: resources/fastq_screen_files/FastQ_Screen_Genomes/fastq_screen.conf
-fastq_screen_aling: bowtie2
-adapters: "resources/trim_files/adapters.fa.gz"
-polyA: "resources/trim_files/polyA.fa.gz"
+  fastqc: 
+    extra: ""
 
-qualimap:
-  genome: HUMAN
+  bbudk:
+    adapters: "resources/trim_files/adapters.fa.gz"
+    polyA: "resources/trim_files/polyA.fa.gz"
+    extra: "k=13 ktrim=r mink=5 qtrim=r trimq=20 useshortkmers=t minlength=20"
+  
+  fastq_screen:
+    config: "resources/fastq_screen_files/FastQ_Screen_Genomes/fastq_screen.conf",
+    aligner: bowtie2
+    extra: ""
 
+  multiqc:
+    extra: "--verbose"
+
+  alignment: 
+    extra: | # Chequear cuales son default y borrarlos
+      --genomeLoad LoadAndKeep
+      --outFilterType BySJout 
+      --outFilterMultimapNmax 25
+      --alignSJoverhangMin 8
+      --alignSJDBoverhangMin 1
+      --outFilterMismatchNmax 999
+      --outFilterMismatchNoverLmax 0.3
+      --alignIntronMin 20
+      --alignIntronMax 1000000
+      --alignMatesGapMax 1000000
+      --limitBAMsortRAM 64000000000
+      --outSAMattributes NH HI AS NM MD
+
+  bam_indexing: 
+    extra: ""
+
+  qualimap:
+    genome: HUMAN
+    extra_single: "-hm 3 -nr 1000 -p strand-specific-forward"
+    extra_multi: ""
+    extra_rnaseq: "-p strand-specific-forward"
+
+  rseqc_strand:
+    extra: ""
+
+  samtools_qc:
+    extra: ""
+
+  feature_counts:
+    extra: "-O -F GTF -t gene -g gene_id --extraAttributes gene_name,transcript_name -s 1"
+
+  umi_extract:
+    extract_method: "regex"
+    extra: "--bc-pattern='^(?P<umi_1>.{6})(?P<discard_1>.{4}).*'" 
+  
+  umi_dedup:
+    method: "unique"
+    extra:  "--multimapping-detection-method=NH"
+
+
+# Resources
 resources:
   default:
     threads: 1
@@ -72,12 +112,12 @@ resources:
   
   bam_indexing:
     threads: 8
-    mem_mb: 4096
+    mem_mb:  4096
     runtime: 10
   
   qualimap:
     threads: 8
-    mem_mb: 16384
+    mem_mb:  16384
     runtime: 10
   
   rseqc_strand:
@@ -87,7 +127,7 @@ resources:
   
   feature_counts:
     threads: 8
-    mem_mb: 64000
+    mem_mb:  64000
     runtime: 120
   
   umi_extract:
