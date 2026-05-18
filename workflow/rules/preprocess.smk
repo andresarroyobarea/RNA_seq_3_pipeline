@@ -16,9 +16,9 @@ if UMIs:
             extract_method = config["umi_extract"]["extract_method"],
             extra = config["umi_extract"]["extra"]
         log:
-            "log/umitools/extract/{sample}_{seq_lane}.log"
+            "log/umi_extract/{sample}_{seq_lane}.log"
         benchmark:
-            "benchmarks/{sample}_{seq_lane}_umi_tools_extract.bmk"
+            "benchmarks/umi_extract/{sample}_{seq_lane}.bmk"
         shell: """
             umi_tools extract \ 
                 --stdin={input} \
@@ -37,17 +37,25 @@ if UMIs:
             stat = "results/alignment/dedup/{sample}_per_umi.tsv"
         conda:
             config["conda_envs"]["umi_tools"]
-        threads: get_resource(config, "umi_dedup", "threads")
+        threads: 
+            get_resource(config, "umi_dedup", "threads")
         resources:
             mem_mb = get_resource(config, "umi_dedup", "mem_mb"),
             runtime = get_resource(config, "umi_dedup", "runtime")
         params:
+            method = config["umi_dedup"]["method"],
             stats_dir = lambda wildcards: f"results/alignment/dedup/{wildcards.sample}"
+            extra = config["umi_dedup"]["extra"]
         log:
-            "log/umitools/dedup/{sample}.log"
+            "log/umi_dedup/{sample}.log"
         benchmark:
-            "benchmarks/{sample}_umi_dedup.bmk"
+            "benchmarks/umi_dedup/{sample}.bmk"
         shell:"""
-            umi_tools dedup -I {input.bam} --log={log} -S {output.dedup} --output-stats={params.stats_dir} \
-                --method=unique --multimapping-detection-method=NH
+            umi_tools dedup \
+                -I {input.bam} \
+                --output-stats={params.stats_dir} \
+                --method={params.method} \
+                {params.extra} \
+                --log={log} \
+                -S {output.dedup} 
         """
