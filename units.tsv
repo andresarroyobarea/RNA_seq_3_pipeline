@@ -1,0 +1,13 @@
+sample	lane	fq1	fq2
+PGA1-Double-KO-S12	L003	data/PGA1-Double-KO-S12_L003.fastq.gz	
+PGA1-Double-KO-S14	L003	data/PGA1-Double-KO-S14_L003.fastq.gz	
+PGA1-Double-KO-S5	L003	data/PGA1-Double-KO-S5_L003.fastq.gz	
+PGA1-MGA-KO-S19	L003	data/PGA1-MGA-KO-S19_L003.fastq.gz	
+PGA1-MGA-KO-S20	L003	data/PGA1-MGA-KO-S20_L003.fastq.gz	
+PGA1-MGA-KO-S3	L003	data/PGA1-MGA-KO-S3_L003.fastq.gz	
+PGA1-TP53-KO-S10	L003	data/PGA1-TP53-KO-S10_L003.fastq.gz	
+PGA1-TP53-KO-S3	L003	data/PGA1-TP53-KO-S3_L003.fastq.gz	
+PGA1-TP53-KO-S9	L003	data/PGA1-TP53-KO-S9_L003.fastq.gz	
+PGA1-WT-S1	L003	data/PGA1-WT-S1_L003.fastq.gz	
+PGA1-WT-S2	L003	data/PGA1-WT-S2_L003.fastq.gz	
+PGA1-WT-S4	L003	data/PGA1-WT-S4_L003.fastq.gz
