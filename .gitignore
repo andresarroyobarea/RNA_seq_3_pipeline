@@ -1,0 +1,15 @@
+# Files and folders to not upload to GitHub.
+
+data/
+metadata/
+notes/
+results/
+log/
+resources/
+benchmarks/
+samples.csv
+scripts/
+*.log
+*.out
+LICENSE
+.snakemake/
