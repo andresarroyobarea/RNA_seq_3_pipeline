@@ -272,16 +272,23 @@ rule rseqc_strand:
         rseqc_out = "results/QC/alignment/rseqc/{sample}_strandiness.txt"
     conda: 
         config["conda_envs"]["rseqc"]
-    threads: get_resource(config, "rseqc_strand", "threads")
+    threads: 
+        get_resource(config, "rseqc_strand", "threads")
     resources:
         mem_mb = get_resource(config, "rseqc_strand", "mem_mb"),
         runtime = get_resource(config, "rseqc_strand", "runtime")
     params:
-        bed_file = config["reference_bed"]
+        annotation = config["genome"]["annotation_bed"],
+        extra = config["parameters"]["rseqc_strand"]["extra"]
     log:
-        "log/QC/alignment/rseqc/{sample}_rseqc.log"
-    shell:
-        "infer_experiment.py -i {input.bam} -r {params.bed_file} > {output.rseqc_out} 2> {log} "
+        "log/QC/alignment/rseqc/{sample}.log"
+    benchmark:
+        "benchmarks/QC/alignment/rseqc/{sample}.bmk"
+    shell:"""
+        infer_experiment.py -i {input.bam} \ 
+            -r {params.annotation} \
+            {params.extra} > {output.rseqc_out} 2> {log}
+    """
 
 rule samtools_stats_flagstat:
     input:
